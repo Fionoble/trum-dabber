@@ -1,0 +1,20 @@
+.drum-grid {
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  gap: 2px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(8, 1fr);
+    // On mobile, show fewer columns at once with horizontal scroll
+  }
+}
+
+.drum-cell {
+  aspect-ratio: 1/1;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+
+  &.active {
+    background-color: #4caf50;
+  }
+}
