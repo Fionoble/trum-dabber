@@ -7,22 +7,41 @@ import { tabStorage } from "../../services/storage";
 export default function Editor() {
   // Define drum sounds and pattern
   const drumSounds = ["kick", "snare", "hihat", "tom", "clap"];
-  const steps = 16;
-
-  // Create initial empty pattern
-  const initialPattern = drumSounds.map(() => Array(steps).fill(false));
 
   // States
-  const [pattern, setPattern] = useState(initialPattern);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentStep, setCurrentStep] = useState(-1);
-  const [bpm, setBpm] = useState(120);
   const [isLoaded, setIsLoaded] = useState(false);
   const [tabName, setTabName] = useState("New Beat");
   const [tabId, setTabId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [isNameFocused, setIsNameFocused] = useState(false);
+  const [bpm, setBpm] = useState(120);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [currentStep, setCurrentStep] = useState(-1);
+
+  // Time signature and bars
+  const [timeSignature, setTimeSignature] = useState({
+    numerator: 4,
+    denominator: 4,
+  });
+  const [bars, setBars] = useState(1);
+  const [showAdvancedControls, setShowAdvancedControls] = useState(false);
+
+  // Calculate total steps based on time signature and bars
+  const calculateTotalSteps = () => {
+    // In 4/4, each bar has 16 steps (4 beats × 4 subdivisions)
+    // In other time signatures, we adapt accordingly
+    return timeSignature.numerator * 4 * bars;
+  };
+
+  const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
+
+  // Initialize pattern with the correct number of steps
+  const createEmptyPattern = (steps) => {
+    return drumSounds.map(() => Array(steps).fill(false));
+  };
+
+  const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
 
   // Refs
   const drumMachineRef = useRef(null);
@@ -48,7 +67,27 @@ export default function Editor() {
         setTabId(tab.id);
         setTabName(tab.name);
         setBpm(tab.bpm || 120);
-        setPattern(tab.tracks.map((track) => track.pattern));
+
+        // Load time signature and bars
+        if (tab.timeSignature) {
+          setTimeSignature(tab.timeSignature);
+        }
+        if (tab.measures) {
+          setBars(tab.measures);
+        }
+
+        // Calculate total steps based on loaded values
+        const steps =
+          (tab.timeSignature?.numerator || 4) * 4 * (tab.measures || 1);
+        setTotalSteps(steps);
+
+        // Load pattern, or create a new one with the right size if pattern doesn't match
+        if (tab.tracks && tab.tracks[0]?.pattern?.length === steps) {
+          setPattern(tab.tracks.map((track) => track.pattern));
+        } else {
+          // Handle case where time signature changed but pattern doesn't match
+          setPattern(createEmptyPattern(steps));
+        }
       }
     }
 
@@ -60,6 +99,40 @@ export default function Editor() {
       }
     };
   }, []);
+
+  // Update total steps when time signature or bars change
+  useEffect(() => {
+    const newTotalSteps = calculateTotalSteps();
+
+    if (newTotalSteps !== totalSteps) {
+      setTotalSteps(newTotalSteps);
+
+      // Resize the pattern to match the new step count
+      resizePattern(newTotalSteps);
+    }
+  }, [timeSignature, bars]);
+
+  // Resize pattern when total steps change (preserving existing data)
+  const resizePattern = (newStepCount) => {
+    const newPattern = pattern.map((row) => {
+      if (row.length < newStepCount) {
+        // Add new empty steps
+        return [...row, ...Array(newStepCount - row.length).fill(false)];
+      } else if (row.length > newStepCount) {
+        // Remove excess steps
+        return row.slice(0, newStepCount);
+      }
+      return row;
+    });
+
+    setPattern(newPattern);
+
+    // If playing, restart to avoid issues
+    if (isPlaying) {
+      togglePlayback();
+      setCurrentStep(-1);
+    }
+  };
 
   // Handle cell click
   const handleCellClick = (row, col) => {
@@ -82,7 +155,11 @@ export default function Editor() {
         drumMachineRef.current.stop();
       }
     } else {
-      const stepTime = (60 * 1000) / bpm / 4; // 16th notes
+      // Calculate step time based on BPM and time signature
+      // Base calculation on quarter notes
+      const quarterNoteTime = (60 * 1000) / bpm;
+      const sixteenthNoteTime = quarterNoteTime / 4;
+
       let step = 0;
 
       intervalRef.current = setInterval(() => {
@@ -95,8 +172,8 @@ export default function Editor() {
           }
         });
 
-        step = (step + 1) % steps;
-      }, stepTime);
+        step = (step + 1) % totalSteps;
+      }, sixteenthNoteTime);
     }
 
     setIsPlaying(!isPlaying);
@@ -131,22 +208,7 @@ export default function Editor() {
     setBpm(newBpm);
 
     // Update playback if currently playing
-    if (isPlaying) {
-      clearInterval(intervalRef.current);
-      const stepTime = (60 * 1000) / newBpm / 4;
-      let step = currentStep;
-
-      intervalRef.current = setInterval(() => {
-        step = (step + 1) % steps;
-        setCurrentStep(step);
-
-        pattern.forEach((row, rowIndex) => {
-          if (row[step] && drumMachineRef.current) {
-            drumMachineRef.current.playSound(drumSounds[rowIndex]);
-          }
-        });
-      }, stepTime);
-    }
+    updatePlaybackIfNeeded();
 
     // Save BPM if tab exists
     if (tabId) {
@@ -158,21 +220,85 @@ export default function Editor() {
   const handleBpmSliderChange = (e) => {
     const newBpm = parseInt(e.target.value);
     setBpm(newBpm);
-
-    // Don't restart playback during slider adjustment
-    // Only save when slider interaction is complete
   };
 
   // BPM slider change complete handler
   const handleBpmSliderChangeComplete = () => {
-    // Restart playback with new tempo if currently playing
+    // Update playback if needed
+    updatePlaybackIfNeeded();
+
+    // Save BPM if tab exists
+    if (tabId) {
+      saveTab(false); // Silent save
+    }
+  };
+
+  // Handles time signature changes
+  const handleTimeSignatureChange = (type, value) => {
+    let newValue = parseInt(value);
+
+    if (type === "numerator") {
+      // Validate numerator (typically 2-15)
+      if (isNaN(newValue) || newValue < 1) {
+        newValue = 4;
+      } else if (newValue > 15) {
+        newValue = 15;
+      }
+
+      setTimeSignature({
+        ...timeSignature,
+        numerator: newValue,
+      });
+    } else if (type === "denominator") {
+      // Denominator is typically 2, 4, 8, or 16
+      const validDenominators = [2, 4, 8, 16];
+      if (!validDenominators.includes(newValue)) {
+        newValue = 4;
+      }
+
+      setTimeSignature({
+        ...timeSignature,
+        denominator: newValue,
+      });
+    }
+
+    // Save if tab exists
+    if (tabId) {
+      saveTab(false);
+    }
+  };
+
+  // Handle bar count changes
+  const handleBarCountChange = (change) => {
+    let newBarCount = bars + change;
+
+    // Validate bar count (1-8)
+    if (newBarCount < 1) {
+      newBarCount = 1;
+    } else if (newBarCount > 8) {
+      newBarCount = 8;
+    }
+
+    setBars(newBarCount);
+
+    // Save if tab exists
+    if (tabId) {
+      saveTab(false);
+    }
+  };
+
+  // Update playback if currently playing
+  const updatePlaybackIfNeeded = () => {
     if (isPlaying) {
       clearInterval(intervalRef.current);
-      const stepTime = (60 * 1000) / bpm / 4;
+
+      const quarterNoteTime = (60 * 1000) / bpm;
+      const sixteenthNoteTime = quarterNoteTime / 4;
+
       let step = currentStep;
 
       intervalRef.current = setInterval(() => {
-        step = (step + 1) % steps;
+        step = (step + 1) % totalSteps;
         setCurrentStep(step);
 
         pattern.forEach((row, rowIndex) => {
@@ -180,12 +306,7 @@ export default function Editor() {
             drumMachineRef.current.playSound(drumSounds[rowIndex]);
           }
         });
-      }, stepTime);
-    }
-
-    // Save BPM if tab exists
-    if (tabId) {
-      saveTab(false); // Silent save
+      }, sixteenthNoteTime);
     }
   };
 
@@ -200,14 +321,15 @@ export default function Editor() {
         id: tabId,
         name: tabName || "Untitled Beat",
         bpm,
+        timeSignature,
+        measures: bars,
         tracks: pattern.map((patternRow, index) => ({
           id: `track-${index + 1}`,
           name: drumSounds[index],
           sound: drumSounds[index],
           pattern: patternRow,
         })),
-        measures: 1,
-        stepsPerMeasure: steps,
+        stepsPerMeasure: timeSignature.numerator * 4,
         volume: 0.7,
       };
 
@@ -234,6 +356,61 @@ export default function Editor() {
         setIsSaving(false);
       }
     }
+  };
+
+  // Get bar markers for the drum grid
+  const getBarMarkers = () => {
+    const markers = [];
+    const stepsPerBar = timeSignature.numerator * 4;
+
+    for (let i = 0; i < bars; i++) {
+      markers.push(i * stepsPerBar);
+    }
+
+    return markers;
+  };
+
+  // Render grid for a single measure with beat indicators
+  const renderMeasureIndicators = () => {
+    const stepsPerBar = timeSignature.numerator * 4;
+    const beatMarkers = [];
+
+    for (let bar = 0; bar < bars; bar++) {
+      for (let beat = 0; beat < timeSignature.numerator; beat++) {
+        // Each beat has 4 subdivisions (16th notes)
+        for (let subdivision = 0; subdivision < 4; subdivision++) {
+          const step = bar * stepsPerBar + beat * 4 + subdivision;
+          let label = "";
+          let className = "step-marker";
+
+          if (subdivision === 0) {
+            // First subdivision of each beat
+            label = (beat + 1).toString();
+            className += " beat-marker";
+
+            if (beat === 0 && bar > 0) {
+              // First beat of bars after the first one
+              className += " bar-start";
+            } else if (beat === 0 && bar === 0) {
+              // First beat of the first bar
+              className += " first-bar";
+            }
+          }
+
+          beatMarkers.push(
+            <div key={step} className={className}>
+              {label}
+            </div>,
+          );
+        }
+      }
+    }
+
+    return (
+      <div className="measure-indicators">
+        <div className="beat-markers">{beatMarkers}</div>
+      </div>
+    );
   };
 
   return (
@@ -312,8 +489,8 @@ export default function Editor() {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="controls flex flex-wrap items-center mb-6 gap-4 p-4 bg-gray-50 rounded-lg">
+      {/* Basic Controls */}
+      <div className="controls flex flex-wrap items-center mb-4 gap-4 p-4 bg-gray-50 rounded-lg">
         <button
           onClick={togglePlayback}
           disabled={!isLoaded}
@@ -355,7 +532,7 @@ export default function Editor() {
         </button>
 
         <div className="flex items-center gap-2">
-          <label htmlFor="bpm" className="font-medium text-gray-700">
+          <label htmlFor="bpm-input" className="font-medium text-gray-700">
             BPM:
           </label>
           <input
@@ -379,7 +556,124 @@ export default function Editor() {
             className="w-36 mx-2"
           />
         </div>
+
+        <button
+          onClick={() => setShowAdvancedControls(!showAdvancedControls)}
+          className="ml-auto text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm"
+        >
+          {showAdvancedControls ? "Hide" : "Show"} Advanced Controls
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className={`h-4 w-4 transition-transform ${showAdvancedControls ? "rotate-180" : ""}`}
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
+              clipRule="evenodd"
+            />
+          </svg>
+        </button>
       </div>
+
+      {/* Advanced Controls - Time Signature and Bars */}
+      {showAdvancedControls && (
+        <div className="advanced-controls mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">
+            Advanced Controls
+          </h3>
+
+          <div className="flex flex-wrap gap-6">
+            {/* Time Signature Controls */}
+            <div className="time-signature flex items-center gap-2">
+              <label className="text-sm text-gray-600">Time Signature:</label>
+              <div className="flex">
+                <select
+                  value={timeSignature.numerator}
+                  onChange={(e) =>
+                    handleTimeSignatureChange("numerator", e.target.value)
+                  }
+                  className="p-1 border border-gray-300 rounded-l-md w-12 text-center"
+                >
+                  {[2, 3, 4, 5, 6, 7, 8, 9, 12].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+                <span className="flex items-center justify-center border-t border-b border-gray-300 px-2 bg-gray-50">
+                  /
+                </span>
+                <select
+                  value={timeSignature.denominator}
+                  onChange={(e) =>
+                    handleTimeSignatureChange("denominator", e.target.value)
+                  }
+                  className="p-1 border border-gray-300 rounded-r-md w-12 text-center"
+                >
+                  {[2, 4, 8, 16].map((num) => (
+                    <option key={num} value={num}>
+                      {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Bar Count Controls */}
+            <div className="bars-control flex items-center gap-2">
+              <label className="text-sm text-gray-600">Bars:</label>
+              <div className="flex items-center border border-gray-300 rounded-md">
+                <button
+                  onClick={() => handleBarCountChange(-1)}
+                  disabled={bars <= 1}
+                  className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+                <span className="px-3 py-1 border-l border-r border-gray-300 min-w-[30px] text-center">
+                  {bars}
+                </span>
+                <button
+                  onClick={() => handleBarCountChange(1)}
+                  disabled={bars >= 8}
+                  className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="text-xs text-gray-500 mt-1 col-span-full">
+              Note: Changing time signature or bar count will resize your
+              pattern. Existing beats will be preserved when possible.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Loading state */}
       {!isLoaded && (
@@ -392,20 +686,43 @@ export default function Editor() {
       {/* Drum grid */}
       {isLoaded && (
         <div className="sequencer">
+          {/* Beat markers */}
+          {renderMeasureIndicators()}
+
+          {/* Drum rows */}
           {pattern.map((row, rowIndex) => (
             <div key={rowIndex} className="flex mb-2 items-center">
               <div className="drum-name w-20 text-right pr-3 font-medium">
                 {drumSounds[rowIndex]}
               </div>
-              <div className="drum-grid flex-1">
-                {row.map((cell, colIndex) => (
-                  <button
-                    key={colIndex}
-                    className={`drum-cell ${cell ? "active" : ""} ${currentStep === colIndex ? "playing" : ""}`}
-                    onClick={() => handleCellClick(rowIndex, colIndex)}
-                    aria-label={`${drumSounds[rowIndex]} step ${colIndex + 1}`}
-                  />
-                ))}
+              <div className="drum-grid flex-1 relative">
+                {row.map((cell, colIndex) => {
+                  // Determine if this cell is the first in a bar
+                  const stepsPerBar = timeSignature.numerator * 4;
+                  const isBarStart = colIndex % stepsPerBar === 0;
+                  const isFirstBar = colIndex === 0;
+
+                  // Determine beat within measure
+                  const beatInMeasure =
+                    Math.floor((colIndex % stepsPerBar) / 4) + 1;
+                  const isBeatStart = colIndex % 4 === 0;
+
+                  return (
+                    <button
+                      key={colIndex}
+                      className={`drum-cell
+                        ${cell ? "active" : ""}
+                        ${currentStep === colIndex ? "playing" : ""}
+                        ${isBarStart ? "bar-start" : ""}
+                        ${isFirstBar ? "first-bar" : ""}
+                        ${isBeatStart ? "beat-start" : ""}
+                      `}
+                      data-beat={isBeatStart ? beatInMeasure : ""}
+                      onClick={() => handleCellClick(rowIndex, colIndex)}
+                      aria-label={`${drumSounds[rowIndex]} step ${colIndex + 1}`}
+                    />
+                  );
+                })}
               </div>
             </div>
           ))}

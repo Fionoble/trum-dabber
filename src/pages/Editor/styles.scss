@@ -1,10 +1,10 @@
 .drum-grid {
   display: grid;
-  grid-template-columns: repeat(16, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(25px, 1fr));
   gap: 4px;
+  position: relative;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(8, 1fr);
     // On mobile, show fewer columns at once with horizontal scroll
     overflow-x: auto;
   }
@@ -14,10 +14,11 @@
   aspect-ratio: 1/1;
   border: 1px solid #ccc;
   border-radius: 4px;
-  min-width: 30px;
-  min-height: 30px;
+  min-width: 25px;
+  min-height: 25px;
   background-color: #f5f5f5;
   transition: all 0.1s ease;
+  position: relative;
 
   &:hover {
     background-color: #e5e5e5;
@@ -41,6 +42,31 @@
     box-shadow: 0 0 0 2px rgba(66, 135, 245, 0.6);
     transform: scale(1.05);
   }
+
+  // Bar start indicators
+  &.bar-start {
+    border-left: 2px solid #666;
+  }
+
+  &.first-bar {
+    border-left: 3px solid #333;
+  }
+
+  // Beat start indicators
+  &.beat-start {
+    border-left-color: #999;
+
+    &::before {
+      content: attr(data-beat);
+      position: absolute;
+      top: -18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 10px;
+      color: #777;
+      pointer-events: none;
+    }
+  }
 }
 
 .sequencer {
@@ -48,12 +74,18 @@
   padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow-x: auto;
 }
 
 .drum-name {
   color: #333;
   font-family: monospace;
   text-transform: uppercase;
+  position: sticky;
+  left: 0;
+  background-color: white;
+  z-index: 10;
 }
 
 .controls {
@@ -61,6 +93,63 @@
   padding: 1rem;
   border-radius: 8px;
   margin-bottom: 1rem;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.measure-indicators {
+  margin-left: 20px;
+  margin-bottom: 8px;
+
+  .beat-markers {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(25px, 1fr));
+    gap: 4px;
+    height: 20px;
+
+    .step-marker {
+      text-align: center;
+      font-size: 10px;
+      color: #888;
+      position: relative;
+    }
+
+    .beat-marker {
+      font-weight: bold;
+      color: #666;
+
+      &.bar-start::before {
+        content: "|";
+        position: absolute;
+        top: -2px;
+        left: -2px;
+        color: #666;
+      }
+
+      &.first-bar::before {
+        content: "|";
+        position: absolute;
+        top: -2px;
+        left: -3px;
+        color: #333;
+        font-weight: bold;
+      }
+    }
+  }
+}
+
+.advanced-controls {
+  transition: all 0.3s ease;
+
+  select,
+  input {
+    &:focus {
+      outline: none;
+      border-color: #4f46e5;
+      box-shadow: 0 0 0 1px rgba(79, 70, 229, 0.2);
+    }
+  }
 }
 
 @keyframes fadeOut {
@@ -77,4 +166,113 @@
 
 .animate-fade-out {
   animation: fadeOut 2s forwards;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 3px solid rgba(0, 0, 0, 0.1);
+  border-radius: 50%;
+  border-top-color: #3498db;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Style number input */
+input[type="number"] {
+  -moz-appearance: textfield; /* Firefox */
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Style range input */
+input[type="range"] {
+  -webkit-appearance: none;
+  height: 8px;
+  background: #d7d7d7;
+  border-radius: 4px;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: #4f46e5;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #4338ca;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: #4f46e5;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  transition: background 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #4338ca;
+}
+
+/* Time signature and bar controls */
+.time-signature,
+.bars-control {
+  display: flex;
+  align-items: center;
+
+  select {
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1em;
+    padding-right: 2rem;
+  }
+}
+
+/* Make sure there's a visual indicator of bar boundaries */
+@media (max-width: 768px) {
+  .drum-grid {
+    min-width: min-content;
+  }
+
+  .bar-start {
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: -12px;
+      bottom: -12px;
+      width: 1px;
+      left: -3px;
+      background-color: rgba(0, 0, 0, 0.2);
+      z-index: 1;
+      pointer-events: none;
+    }
+  }
+
+  .first-bar::after {
+    background-color: rgba(0, 0, 0, 0.4);
+    width: 2px;
+  }
 }
