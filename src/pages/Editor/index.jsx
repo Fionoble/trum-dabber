@@ -688,44 +688,42 @@ export default function Editor() {
         <div className="sequencer">
           {/* Beat markers */}
           {renderMeasureIndicators()}
-
           {/* Drum rows */}
-          {pattern.map((row, rowIndex) => (
-            <div key={rowIndex} className="flex mb-2 items-center">
-              <div className="drum-name w-20 text-right pr-3 font-medium">
-                {drumSounds[rowIndex]}
-              </div>
-              <div className="drum-grid flex-1 relative">
-                {row.map((cell, colIndex) => {
-                  // Determine if this cell is the first in a bar
-                  const stepsPerBar = timeSignature.numerator * 4;
-                  const isBarStart = colIndex % stepsPerBar === 0;
-                  const isFirstBar = colIndex === 0;
+          <div className="drum-rows-container">
+            {pattern.map((row, rowIndex) => (
+              <div key={rowIndex} className="flex mb-2 items-center drum-row">
+                <div className="drum-name text-right pr-3 font-medium">
+                  {drumSounds[rowIndex]}
+                </div>
+                <div className="drum-grid flex-1 relative">
+                  {row.map((cell, colIndex) => {
+                    // Determine if this cell is the first in a bar
+                    const stepsPerBar = timeSignature.numerator * 4;
+                    const isBarStart = colIndex % stepsPerBar === 0;
+                    const isFirstBar = colIndex === 0;
 
-                  // Determine beat within measure
-                  const beatInMeasure =
-                    Math.floor((colIndex % stepsPerBar) / 4) + 1;
-                  const isBeatStart = colIndex % 4 === 0;
+                    // Determine beat within measure
+                    const isBeatStart = colIndex % 4 === 0;
 
-                  return (
-                    <button
-                      key={colIndex}
-                      className={`drum-cell
+                    return (
+                      <button
+                        key={colIndex}
+                        className={`drum-cell
                         ${cell ? "active" : ""}
                         ${currentStep === colIndex ? "playing" : ""}
                         ${isBarStart ? "bar-start" : ""}
                         ${isFirstBar ? "first-bar" : ""}
                         ${isBeatStart ? "beat-start" : ""}
                       `}
-                      data-beat={isBeatStart ? beatInMeasure : ""}
-                      onClick={() => handleCellClick(rowIndex, colIndex)}
-                      aria-label={`${drumSounds[rowIndex]} step ${colIndex + 1}`}
-                    />
-                  );
-                })}
+                        onClick={() => handleCellClick(rowIndex, colIndex)}
+                        aria-label={`${drumSounds[rowIndex]} step ${colIndex + 1}`}
+                      />
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>
