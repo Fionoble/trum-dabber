@@ -6,7 +6,7 @@ import { tabStorage } from "../../services/storage";
 
 export default function Editor() {
   // Define drum sounds and pattern
-  const drumSounds = ["kick", "snare", "hihat", "tom", "clap"];
+  const drumSounds = ["hihat", "tom", "snare", "clap", "kick"];
 
   // States
   const [isLoaded, setIsLoaded] = useState(false);
@@ -18,6 +18,7 @@ export default function Editor() {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
+  const [subdivision, setSubdivision] = useState(4); // Default: 16th notes (4 subdivisions per beat)
 
   // Time signature and bars
   const [timeSignature, setTimeSignature] = useState({
@@ -27,11 +28,11 @@ export default function Editor() {
   const [bars, setBars] = useState(1);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
 
-  // Calculate total steps based on time signature and bars
+  // Calculate total steps based on time signature, bars, and subdivision
   const calculateTotalSteps = () => {
-    // In 4/4, each bar has 16 steps (4 beats × 4 subdivisions)
-    // In other time signatures, we adapt accordingly
-    return timeSignature.numerator * 4 * bars;
+    // Time signature numerator determines beats per bar
+    // Subdivision determines steps per beat
+    return timeSignature.numerator * subdivision * bars;
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
@@ -75,10 +76,16 @@ export default function Editor() {
         if (tab.measures) {
           setBars(tab.measures);
         }
+        // Load subdivision if available, default to 4 (16th notes)
+        if (tab.subdivision) {
+          setSubdivision(tab.subdivision);
+        }
 
         // Calculate total steps based on loaded values
         const steps =
-          (tab.timeSignature?.numerator || 4) * 4 * (tab.measures || 1);
+          (tab.timeSignature?.numerator || 4) *
+          (tab.subdivision || 4) *
+          (tab.measures || 1);
         setTotalSteps(steps);
 
         // Load pattern, or create a new one with the right size if pattern doesn't match
@@ -100,7 +107,7 @@ export default function Editor() {
     };
   }, []);
 
-  // Update total steps when time signature or bars change
+  // Update total steps when time signature, bars, or subdivision change
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
 
@@ -110,7 +117,7 @@ export default function Editor() {
       // Resize the pattern to match the new step count
       resizePattern(newTotalSteps);
     }
-  }, [timeSignature, bars]);
+  }, [timeSignature, bars, subdivision]);
 
   // Resize pattern when total steps change (preserving existing data)
   const resizePattern = (newStepCount) => {
@@ -134,6 +141,67 @@ export default function Editor() {
     }
   };
 
+  // Handle subdivision changes
+  const handleSubdivisionChange = (newSubdivision) => {
+    // Store current pattern to preserve existing beats
+    const currentPattern = [...pattern];
+
+    // Calculate new total steps based on new subdivision
+    const beatsPerBar = timeSignature.numerator;
+    const oldSubdivisionsPerBeat = subdivision;
+    const newSubdivisionsPerBeat = newSubdivision;
+
+    const oldTotalSteps = beatsPerBar * oldSubdivisionsPerBeat * bars;
+    const newTotalSteps = beatsPerBar * newSubdivisionsPerBeat * bars;
+
+    // Create new pattern with adjusted size
+    const newPattern = drumSounds.map((_, rowIndex) => {
+      const newRow = Array(newTotalSteps).fill(false);
+
+      // Map old beats to new positions
+      if (newSubdivisionsPerBeat > oldSubdivisionsPerBeat) {
+        // Expanding: spread existing beats out
+        const ratio = newSubdivisionsPerBeat / oldSubdivisionsPerBeat;
+
+        for (let i = 0; i < oldTotalSteps; i++) {
+          if (currentPattern[rowIndex][i]) {
+            newRow[Math.floor(i * ratio)] = true;
+          }
+        }
+      } else {
+        // Contracting: combine beats (with potential data loss)
+        const ratio = oldSubdivisionsPerBeat / newSubdivisionsPerBeat;
+
+        for (let i = 0; i < oldTotalSteps; i++) {
+          if (currentPattern[rowIndex][i]) {
+            const newIndex = Math.floor(i / ratio);
+            if (newIndex < newTotalSteps) {
+              newRow[newIndex] = true;
+            }
+          }
+        }
+      }
+
+      return newRow;
+    });
+
+    // Update state
+    setSubdivision(newSubdivision);
+    setTotalSteps(newTotalSteps);
+    setPattern(newPattern);
+
+    // If playing, restart to avoid issues
+    if (isPlaying) {
+      togglePlayback();
+      setCurrentStep(-1);
+    }
+
+    // Save if tab exists
+    if (tabId) {
+      saveTab(false);
+    }
+  };
+
   // Handle cell click
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
@@ -154,13 +222,14 @@ export default function Editor() {
       if (drumMachineRef.current) {
         drumMachineRef.current.stop();
       }
+      setIsPlaying(false);
     } else {
-      // Calculate step time based on BPM and time signature
-      // Base calculation on quarter notes
+      // Calculate step time based on BPM, time signature, and subdivision
       const quarterNoteTime = (60 * 1000) / bpm;
-      const sixteenthNoteTime = quarterNoteTime / 4;
+      const stepTime = quarterNoteTime / subdivision;
 
       let step = 0;
+      const totalPatternSteps = calculateTotalSteps();
 
       intervalRef.current = setInterval(() => {
         setCurrentStep(step);
@@ -172,11 +241,25 @@ export default function Editor() {
           }
         });
 
-        step = (step + 1) % totalSteps;
-      }, sixteenthNoteTime);
-    }
+        step = (step + 1) % totalPatternSteps;
 
-    setIsPlaying(!isPlaying);
+        // Scroll to the bar containing the current step if needed
+        const stepsPerBar = timeSignature.numerator * subdivision;
+        const currentBarIndex = Math.floor(step / stepsPerBar);
+
+        // Only scroll on larger screens where bars are arranged vertically
+        if (window.innerWidth >= 768) {
+          const barElement = document.querySelector(
+            `.bar-section:nth-child(${currentBarIndex + 1})`,
+          );
+          if (barElement && step % stepsPerBar === 0) {
+            barElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+          }
+        }
+      }, stepTime);
+
+      setIsPlaying(true);
+    }
   };
 
   // Handle tab name change
@@ -275,9 +358,11 @@ export default function Editor() {
     // Validate bar count (1-8)
     if (newBarCount < 1) {
       newBarCount = 1;
-    } else if (newBarCount > 8) {
-      newBarCount = 8;
     }
+    // No need to cap it
+    // else if (newBarCount > 8) {
+    //   newBarCount = 8;
+    // }
 
     setBars(newBarCount);
 
@@ -293,7 +378,7 @@ export default function Editor() {
       clearInterval(intervalRef.current);
 
       const quarterNoteTime = (60 * 1000) / bpm;
-      const sixteenthNoteTime = quarterNoteTime / 4;
+      const stepTime = quarterNoteTime / subdivision;
 
       let step = currentStep;
 
@@ -306,7 +391,7 @@ export default function Editor() {
             drumMachineRef.current.playSound(drumSounds[rowIndex]);
           }
         });
-      }, sixteenthNoteTime);
+      }, stepTime);
     }
   };
 
@@ -323,13 +408,14 @@ export default function Editor() {
         bpm,
         timeSignature,
         measures: bars,
+        subdivision, // Save the subdivision value
         tracks: pattern.map((patternRow, index) => ({
           id: `track-${index + 1}`,
           name: drumSounds[index],
           sound: drumSounds[index],
           pattern: patternRow,
         })),
-        stepsPerMeasure: timeSignature.numerator * 4,
+        stepsPerMeasure: timeSignature.numerator * subdivision,
         volume: 0.7,
       };
 
@@ -356,61 +442,6 @@ export default function Editor() {
         setIsSaving(false);
       }
     }
-  };
-
-  // Get bar markers for the drum grid
-  const getBarMarkers = () => {
-    const markers = [];
-    const stepsPerBar = timeSignature.numerator * 4;
-
-    for (let i = 0; i < bars; i++) {
-      markers.push(i * stepsPerBar);
-    }
-
-    return markers;
-  };
-
-  // Render grid for a single measure with beat indicators
-  const renderMeasureIndicators = () => {
-    const stepsPerBar = timeSignature.numerator * 4;
-    const beatMarkers = [];
-
-    for (let bar = 0; bar < bars; bar++) {
-      for (let beat = 0; beat < timeSignature.numerator; beat++) {
-        // Each beat has 4 subdivisions (16th notes)
-        for (let subdivision = 0; subdivision < 4; subdivision++) {
-          const step = bar * stepsPerBar + beat * 4 + subdivision;
-          let label = "";
-          let className = "step-marker";
-
-          if (subdivision === 0) {
-            // First subdivision of each beat
-            label = (beat + 1).toString();
-            className += " beat-marker";
-
-            if (beat === 0 && bar > 0) {
-              // First beat of bars after the first one
-              className += " bar-start";
-            } else if (beat === 0 && bar === 0) {
-              // First beat of the first bar
-              className += " first-bar";
-            }
-          }
-
-          beatMarkers.push(
-            <div key={step} className={className}>
-              {label}
-            </div>,
-          );
-        }
-      }
-    }
-
-    return (
-      <div className="measure-indicators">
-        <div className="beat-markers">{beatMarkers}</div>
-      </div>
-    );
   };
 
   return (
@@ -556,6 +587,51 @@ export default function Editor() {
             className="w-36 mx-2"
           />
         </div>
+        {/* Bar Count Controls */}
+        <div className="bars-control flex items-center gap-2">
+          <label className="text-sm text-gray-600">Bars:</label>
+          <div className="flex items-center border border-gray-300 rounded-md">
+            <button
+              onClick={() => handleBarCountChange(-1)}
+              disabled={bars <= 1}
+              className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+            <span className="px-3 py-1 border-l border-r border-gray-300 min-w-[30px] text-center">
+              {bars}
+            </span>
+            <button
+              onClick={() => handleBarCountChange(1)}
+              disabled={bars >= 8}
+              className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-4 w-4"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+        </div>
 
         <button
           onClick={() => setShowAdvancedControls(!showAdvancedControls)}
@@ -621,55 +697,36 @@ export default function Editor() {
               </div>
             </div>
 
-            {/* Bar Count Controls */}
-            <div className="bars-control flex items-center gap-2">
-              <label className="text-sm text-gray-600">Bars:</label>
-              <div className="flex items-center border border-gray-300 rounded-md">
-                <button
-                  onClick={() => handleBarCountChange(-1)}
-                  disabled={bars <= 1}
-                  className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+            {/* Note Resolution Control */}
+            <div className="subdivision-control flex items-center gap-2">
+              <label className="text-sm text-gray-600">Note Resolution:</label>
+              <div className="flex">
+                <select
+                  value={subdivision}
+                  onChange={(e) =>
+                    handleSubdivisionChange(parseInt(e.target.value))
+                  }
+                  className="p-1 border border-gray-300 rounded-md"
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
-                <span className="px-3 py-1 border-l border-r border-gray-300 min-w-[30px] text-center">
-                  {bars}
-                </span>
-                <button
-                  onClick={() => handleBarCountChange(1)}
-                  disabled={bars >= 8}
-                  className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                </button>
+                  <option value="2">8th Notes</option>
+                  <option value="4">16th Notes</option>
+                  <option value="8">32nd Notes</option>
+                </select>
               </div>
+              <span className="text-xs text-gray-500">
+                {subdivision === 2
+                  ? "8th"
+                  : subdivision === 4
+                    ? "16th"
+                    : "32nd"}{" "}
+                notes
+              </span>
             </div>
 
             <div className="text-xs text-gray-500 mt-1 col-span-full">
-              Note: Changing time signature or bar count will resize your
-              pattern. Existing beats will be preserved when possible.
+              Note: Changing time signature, bar count, or note resolution will
+              resize your pattern. Existing beats will be preserved when
+              possible.
             </div>
           </div>
         </div>
@@ -683,46 +740,108 @@ export default function Editor() {
         </div>
       )}
 
-      {/* Drum grid */}
+      {/* Drum grid with bar-based layout */}
       {isLoaded && (
         <div className="sequencer">
-          {/* Beat markers */}
-          {renderMeasureIndicators()}
-          {/* Drum rows */}
-          <div className="drum-rows-container">
-            {pattern.map((row, rowIndex) => (
-              <div key={rowIndex} className="flex mb-2 items-center drum-row">
-                <div className="drum-name text-right pr-3 font-medium">
-                  {drumSounds[rowIndex]}
-                </div>
-                <div className="drum-grid flex-1 relative">
-                  {row.map((cell, colIndex) => {
-                    // Determine if this cell is the first in a bar
-                    const stepsPerBar = timeSignature.numerator * 4;
-                    const isBarStart = colIndex % stepsPerBar === 0;
-                    const isFirstBar = colIndex === 0;
+          {/* Bars container - vertical wrapping happens here */}
+          <div className="bars-container">
+            {Array(bars)
+              .fill(0)
+              .map((_, barIndex) => {
+                // Calculate step range for this bar
+                const stepsPerBar = timeSignature.numerator * subdivision;
+                const startStep = barIndex * stepsPerBar;
+                const endStep = startStep + stepsPerBar;
 
-                    // Determine beat within measure
-                    const isBeatStart = colIndex % 4 === 0;
+                return (
+                  <div key={barIndex} className="bar-section">
+                    {/* Bar number indicator */}
+                    <div className="bar-number">{barIndex + 1}</div>
 
-                    return (
-                      <button
-                        key={colIndex}
-                        className={`drum-cell
-                        ${cell ? "active" : ""}
-                        ${currentStep === colIndex ? "playing" : ""}
-                        ${isBarStart ? "bar-start" : ""}
-                        ${isFirstBar ? "first-bar" : ""}
-                        ${isBeatStart ? "beat-start" : ""}
-                      `}
-                        onClick={() => handleCellClick(rowIndex, colIndex)}
-                        aria-label={`${drumSounds[rowIndex]} step ${colIndex + 1}`}
-                      />
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+                    {/* Beat markers for this bar */}
+                    <div className="measure-indicators">
+                      <div className="beat-markers">
+                        {Array(timeSignature.numerator)
+                          .fill(0)
+                          .map((_, beatIndex) => (
+                            <div key={beatIndex} className="beat-marker-group">
+                              {Array(subdivision)
+                                .fill(0)
+                                .map((_, subIndex) => {
+                                  const step =
+                                    beatIndex * subdivision + subIndex;
+                                  // Determine what type of marker to display
+                                  const isMainBeat = subIndex === 0;
+                                  const isEighthNote =
+                                    subdivision >= 2 &&
+                                    subIndex % (subdivision / 2) === 0;
+                                  const isSixteenthNote =
+                                    subdivision >= 4 &&
+                                    subIndex % (subdivision / 4) === 0;
+
+                                  return (
+                                    <div
+                                      key={step}
+                                      className={`step-marker
+                                        ${isMainBeat ? "beat-marker" : ""}
+                                        ${!isMainBeat && isEighthNote ? "eighth-marker" : ""}
+                                        ${!isMainBeat && !isEighthNote && isSixteenthNote ? "sixteenth-marker" : ""}`}
+                                    >
+                                      {isMainBeat ? beatIndex + 1 : ""}
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+
+                    {/* Drum rows for this bar */}
+                    <div className="drum-rows-container">
+                      {pattern.map((row, rowIndex) => (
+                        <div key={rowIndex} className="drum-row">
+                          {/* Instrument name - show only in first bar or on smaller screens */}
+                          {barIndex === 0 ? (
+                            <div className="drum-name">
+                              {drumSounds[rowIndex]}
+                            </div>
+                          ) : null}
+                          {/* Grid cells for this bar */}
+                          <div
+                            className={`drum-grid resolution-${subdivision}`}
+                            style={{
+                              width: `${timeSignature.numerator * subdivision * 29}px`,
+                            }}
+                          >
+                            {row
+                              .slice(startStep, endStep)
+                              .map((cell, cellIndex) => {
+                                const globalColIndex = startStep + cellIndex;
+                                const isBeatStart = cellIndex % 4 === 0;
+
+                                return (
+                                  <button
+                                    key={cellIndex}
+                                    className={`drum-cell
+                                    ${cell ? "active" : ""}
+                                    ${currentStep === globalColIndex ? "playing" : ""}
+                                    ${isBeatStart ? "beat-start" : ""}
+                                    ${cellIndex === 0 ? "bar-start" : ""}
+                                  `}
+                                    onClick={() =>
+                                      handleCellClick(rowIndex, globalColIndex)
+                                    }
+                                    aria-label={`${drumSounds[rowIndex]} bar ${barIndex + 1}, step ${cellIndex + 1}`}
+                                  />
+                                );
+                              })}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
           </div>
         </div>
       )}
