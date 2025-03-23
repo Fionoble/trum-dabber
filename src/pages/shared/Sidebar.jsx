@@ -1,15 +1,13 @@
 import { h } from "preact";
-// import { signOut } from "../../services/auth";
 import { useLocation } from "preact-iso";
-import { useState, useEffect } from "preact/hooks";
+import { isAuthenticated, signOut } from "../../services/auth";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
-  const { url } = useLocation();
+  const { url, route } = useLocation();
 
-  const handleLogout = () => {
-    // Call the signOut function from your auth service
-    // signOut();
-    // You might want to redirect to login page or homepage after logout
+  const handleLogout = async () => {
+    await signOut();
+    route("/login");
   };
 
   return (
@@ -150,36 +148,67 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         />
       </nav>
 
-      {/* Logout button at the bottom */}
+      {/* Login/Logout button at the bottom */}
       <div className="mt-auto border-t border-gray-700 py-3 px-2">
-        <button
-          onClick={handleLogout}
-          className={`w-full group flex items-center px-2 py-3 text-base font-medium rounded-md hover:bg-gray-700 text-red-400 transition-all duration-200
-            ${!isOpen ? "justify-center" : ""}
-            active:transform active:translate-y-0.5 active:bg-opacity-90 active:shadow-inner`}
-        >
-          <div
-            className={`${isOpen ? "mr-4" : ""} transition-transform active:scale-95`}
+        {isAuthenticated.value ? (
+          <button
+            onClick={handleLogout}
+            className={`w-full group flex items-center px-2 py-3 text-base font-medium rounded-md hover:bg-gray-700 text-red-400 transition-all duration-200
+              ${!isOpen ? "justify-center" : ""}
+              active:transform active:translate-y-0.5 active:bg-opacity-90 active:shadow-inner`}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
+            <div
+              className={`${isOpen ? "mr-4" : ""} transition-transform active:scale-95`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-              />
-            </svg>
-          </div>
-          {isOpen && (
-            <span className="transition-opacity duration-300">Logout</span>
-          )}
-        </button>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                />
+              </svg>
+            </div>
+            {isOpen && (
+              <span className="transition-opacity duration-300">Logout</span>
+            )}
+          </button>
+        ) : (
+          <a
+            href="/login"
+            className={`w-full group flex items-center px-2 py-3 text-base font-medium rounded-md hover:bg-gray-700 text-green-400 transition-all duration-200
+              ${!isOpen ? "justify-center" : ""}
+              active:transform active:translate-y-0.5 active:bg-opacity-90 active:shadow-inner`}
+          >
+            <div
+              className={`${isOpen ? "mr-4" : ""} transition-transform active:scale-95`}
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"
+                />
+              </svg>
+            </div>
+            {isOpen && (
+              <span className="transition-opacity duration-300">Login</span>
+            )}
+          </a>
+        )}
       </div>
     </div>
   );

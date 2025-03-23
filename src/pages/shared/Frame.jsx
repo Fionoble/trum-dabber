@@ -1,8 +1,10 @@
 import { useState, useEffect } from "preact/hooks";
 import Sidebar from "./Sidebar";
+import { isAuthenticated } from "../../services/auth";
 
 export default function Frame({ children }) {
   const [isOpen, setIsOpen] = useState(true);
+
   useEffect(() => {
     const handleResize = () => {
       if (window.innerWidth < 768) {
@@ -10,13 +12,9 @@ export default function Frame({ children }) {
       }
     };
 
-    // Initial check
     handleResize();
-
-    // Add event listener
     window.addEventListener("resize", handleResize);
 
-    // Cleanup
     return () => {
       window.removeEventListener("resize", handleResize);
     };
@@ -25,6 +23,11 @@ export default function Frame({ children }) {
   const toggleSidebar = () => {
     setIsOpen(!isOpen);
   };
+
+  // If not authenticated, just return the children without the frame
+  if (!isAuthenticated.value) {
+    return <div className="flex-1 overflow-auto">{children}</div>;
+  }
 
   return (
     <div className="flex h-screen w-full overflow-hidden">
