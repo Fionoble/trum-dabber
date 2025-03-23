@@ -6,7 +6,7 @@ import { tabStorage } from "../../services/storage";
 
 export default function Editor() {
   // Define drum sounds and pattern
-  const drumSounds = ["hihat", "tom", "snare", "clap", "kick"];
+  const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
 
   // States
   const [isLoaded, setIsLoaded] = useState(false);

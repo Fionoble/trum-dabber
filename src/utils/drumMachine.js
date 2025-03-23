@@ -1,3 +1,9 @@
+import kickSound from "../assets/sounds/kick.wav";
+import snareSound from "../assets/sounds/snare.wav";
+import hihatSound from "../assets/sounds/hi-hat.wav";
+import tomSound from "../assets/sounds/tom.wav";
+import crashSound from "../assets/sounds/crash.wav";
+
 export class DrumMachine {
   constructor() {
     this.audioContext = new (window.AudioContext ||
@@ -11,12 +17,11 @@ export class DrumMachine {
 
   async loadSamples() {
     const sampleList = {
-      kick: "/assets/sounds/kick.wav",
-      snare: "/assets/sounds/snare.wav",
-      hihat: "/assets/sounds/hihat.wav",
-      tom: "/assets/sounds/tom.wav",
-      clap: "/assets/sounds/clap.wav",
-      // Add more drum samples as needed
+      kick: kickSound,
+      snare: snareSound,
+      hihat: hihatSound,
+      tom: tomSound,
+      crash: crashSound,
     };
 
     try {
