@@ -4,6 +4,8 @@ import { useLocation } from "preact-iso";
 import "./styles.scss";
 import { tabStorage } from "../../services/storage";
 
+const MAX_BAR_COUNT = 25;
+
 export default function Editor() {
   // Define drum sounds and pattern
   const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
@@ -28,16 +30,12 @@ export default function Editor() {
   const [bars, setBars] = useState(1);
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
 
-  // Calculate total steps based on time signature, bars, and subdivision
   const calculateTotalSteps = () => {
-    // Time signature numerator determines beats per bar
-    // Subdivision determines steps per beat
     return timeSignature.numerator * subdivision * bars;
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
 
-  // Initialize pattern with the correct number of steps
   const createEmptyPattern = (steps) => {
     return drumSounds.map(() => Array(steps).fill(false));
   };
@@ -48,8 +46,10 @@ export default function Editor() {
   const drumMachineRef = useRef(null);
   const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
+
   const location = useLocation();
 
+  console.log(location.path);
   // Initialize drum machine and load tab if exists
   useEffect(() => {
     const initDrumMachine = async () => {
@@ -60,10 +60,11 @@ export default function Editor() {
 
     initDrumMachine();
 
-    // Check if we're editing an existing tab or creating a new one
     const hash = location.url.split("#")[1] || "";
     if (hash && hash !== "new") {
+      console.log("has tab", hash);
       const tab = tabStorage.getTab(hash);
+      console.log(tab);
       if (tab) {
         setTabId(tab.id);
         setTabName(tab.name);
@@ -289,31 +290,8 @@ export default function Editor() {
     }
 
     setBpm(newBpm);
-
-    // Update playback if currently playing
-    updatePlaybackIfNeeded();
-
-    // Save BPM if tab exists
-    if (tabId) {
-      saveTab(false); // Silent save (no notification)
-    }
-  };
-
-  // BPM slider change handler
-  const handleBpmSliderChange = (e) => {
-    const newBpm = parseInt(e.target.value);
-    setBpm(newBpm);
-  };
-
-  // BPM slider change complete handler
-  const handleBpmSliderChangeComplete = () => {
-    // Update playback if needed
-    updatePlaybackIfNeeded();
-
-    // Save BPM if tab exists
-    if (tabId) {
-      saveTab(false); // Silent save
-    }
+    stopPlaybackIfPlaying();
+    if (tabId) saveTab(false); // Silent save
   };
 
   // Handles time signature changes
@@ -345,54 +323,23 @@ export default function Editor() {
       });
     }
 
-    // Save if tab exists
-    if (tabId) {
-      saveTab(false);
-    }
+    if (tabId) saveTab(false); // Silent save
   };
 
-  // Handle bar count changes
   const handleBarCountChange = (change) => {
     let newBarCount = bars + change;
-
-    // Validate bar count (1-8)
     if (newBarCount < 1) {
       newBarCount = 1;
+    } else if (newBarCount > MAX_BAR_COUNT) {
+      newBarCount = MAX_BAR_COUNT;
     }
-    // No need to cap it
-    // else if (newBarCount > 8) {
-    //   newBarCount = 8;
-    // }
-
     setBars(newBarCount);
-
-    // Save if tab exists
-    if (tabId) {
-      saveTab(false);
-    }
+    if (tabId) saveTab(false); //Silent save
   };
 
   // Update playback if currently playing
-  const updatePlaybackIfNeeded = () => {
-    if (isPlaying) {
-      clearInterval(intervalRef.current);
-
-      const quarterNoteTime = (60 * 1000) / bpm;
-      const stepTime = quarterNoteTime / subdivision;
-
-      let step = currentStep;
-
-      intervalRef.current = setInterval(() => {
-        step = (step + 1) % totalSteps;
-        setCurrentStep(step);
-
-        pattern.forEach((row, rowIndex) => {
-          if (row[step] && drumMachineRef.current) {
-            drumMachineRef.current.playSound(drumSounds[rowIndex]);
-          }
-        });
-      }, stepTime);
-    }
+  const stopPlaybackIfPlaying = () => {
+    if (isPlaying) togglePlayback();
   };
 
   // Save the current pattern
@@ -575,17 +522,6 @@ export default function Editor() {
             onChange={handleBpmChange}
             className="w-16 p-1 border border-gray-300 rounded text-center"
           />
-          <input
-            id="bpm-slider"
-            type="range"
-            min="40"
-            max="240"
-            value={bpm}
-            onChange={handleBpmSliderChange}
-            onMouseUp={handleBpmSliderChangeComplete}
-            onTouchEnd={handleBpmSliderChangeComplete}
-            className="w-36 mx-2"
-          />
         </div>
         {/* Bar Count Controls */}
         <div className="bars-control flex items-center gap-2">
@@ -614,7 +550,7 @@ export default function Editor() {
             </span>
             <button
               onClick={() => handleBarCountChange(1)}
-              disabled={bars >= 8}
+              disabled={bars >= MAX_BAR_COUNT}
               className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
             >
               <svg
