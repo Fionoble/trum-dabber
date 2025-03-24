@@ -47,7 +47,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           href="/editor#new"
           isOpen={isOpen}
           label="New Dab"
-          isActive={url.includes("/editor#new")}
+          isActive={url.includes("/editor/new")}
           icon={<EditorIcon />}
         />
         <NavItem

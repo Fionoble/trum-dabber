@@ -6,7 +6,7 @@ import { tabStorage } from "../../services/storage";
 
 const MAX_BAR_COUNT = 25;
 
-export default function Editor() {
+export default function Editor({ id, newTab }) {
   // Define drum sounds and pattern
   const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
 
@@ -60,11 +60,18 @@ export default function Editor() {
 
     initDrumMachine();
 
-    const hash = location.url.split("#")[1] || "";
-    if (hash && hash !== "new") {
-      console.log("has tab", hash);
-      const tab = tabStorage.getTab(hash);
-      console.log(tab);
+    if (newTab) {
+      // Handle new tab creation
+      setTabName("New Beat");
+      setTabId(null);
+      setBpm(120);
+      setTimeSignature({ numerator: 4, denominator: 4 });
+      setBars(1);
+      setSubdivision(4);
+      setTotalSteps(calculateTotalSteps());
+      setPattern(createEmptyPattern(calculateTotalSteps()));
+    } else if (id) {
+      const tab = tabStorage.getTab(id);
       if (tab) {
         setTabId(tab.id);
         setTabName(tab.name);
@@ -96,6 +103,8 @@ export default function Editor() {
           // Handle case where time signature changed but pattern doesn't match
           setPattern(createEmptyPattern(steps));
         }
+      } else {
+        route("/editor/new");
       }
     }
 
@@ -371,7 +380,8 @@ export default function Editor() {
 
       // Update URL if it's a new tab
       if (!tabId) {
-        window.history.replaceState(null, "", `/editor#${savedId}`);
+        window.history.replaceState(null, "", `/editor/${savedId}`);
+        route(`/editor/${savedId}`, true);
       }
 
       if (showNotification) {

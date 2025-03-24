@@ -27,7 +27,8 @@ function App() {
           <Login path="/login" />
           <Signup path="/signup" />
           <Help path="/help" />
-          <Editor path="/editor" />
+          <Editor path="/editor/new" newTab />
+          <Editor path="/editor/:id" />
           <ProtectedRoute path="/" component={TabList} />
           <ProtectedRoute path="/settings" component={Settings} />
         </Router>

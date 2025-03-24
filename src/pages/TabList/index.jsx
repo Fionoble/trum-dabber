@@ -103,7 +103,7 @@ export default function TabList() {
 
           {/* Create new tab button */}
           <a
-            href="/editor#new"
+            href="/editor/new"
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 flex items-center gap-2"
           >
             <svg
@@ -155,7 +155,7 @@ export default function TabList() {
             Start creating your first beat to build your collection
           </p>
           <a
-            href="/editor#new"
+            href="/editor/new"
             className="px-6 py-3 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 text-lg transition-all"
           >
             Create Your First Beat
@@ -256,7 +256,7 @@ export default function TabList() {
               </div>
 
               <a
-                href={`/editor#${tab.id}`}
+                href={`/editor/${tab.id}`}
                 className="mt-4 py-2 px-4 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 text-center rounded-md transition-colors w-full"
               >
                 Open Beat
@@ -319,7 +319,7 @@ export default function TabList() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-3">
                       <a
-                        href={`/editor#${tab.id}`}
+                        href={`/editor/${tab.id}`}
                         className="text-indigo-600 hover:text-indigo-900"
                       >
                         Edit
