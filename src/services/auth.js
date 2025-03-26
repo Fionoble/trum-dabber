@@ -56,6 +56,26 @@ export async function signIn(email, password) {
   }
 }
 
+// Sign in with Google
+export async function signInWithGoogle() {
+  authError.value = null;
+  try {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+    });
+
+    if (error) {
+      authError.value = error.message;
+      return false;
+    }
+
+    return true;
+  } catch (error) {
+    authError.value = error.message;
+    return false;
+  }
+}
+
 // Sign up with email and password
 export async function signUp(email, password) {
   authError.value = null;

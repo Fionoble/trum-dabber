@@ -1,5 +1,6 @@
 import { useState, useEffect } from "preact/hooks";
 import { tabStorage } from "../../services/storage";
+import { isAuthenticated } from "../../services/auth";
 import "./styles.scss";
 
 export default function TabList() {
@@ -7,31 +8,76 @@ export default function TabList() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [error, setError] = useState(null);
+  const [migratedMessage, setMigratedMessage] = useState(false);
 
   // Load tabs from storage
   useEffect(() => {
     loadTabs();
-  }, []);
 
-  const loadTabs = () => {
+    // Check if we need to migrate tabs from localStorage to Supabase
+    if (isAuthenticated.value) {
+      // checkAndMigrate();
+    }
+  }, [isAuthenticated.value]);
+
+  const checkAndMigrate = async () => {
+    // Check if we've already migrated
+    const hasMigrated = localStorage.getItem("trum-dabber-migrated");
+
+    if (!hasMigrated && isAuthenticated.value) {
+      // Perform the migration
+      const success = await tabStorage.migrateLocalTabsToSupabase();
+
+      if (success) {
+        localStorage.setItem("trum-dabber-migrated", "true");
+        setMigratedMessage(true);
+
+        // Hide the message after 5 seconds
+        setTimeout(() => {
+          setMigratedMessage(false);
+        }, 5000);
+
+        // Reload tabs after migration
+        loadTabs();
+      }
+    }
+  };
+
+  const loadTabs = async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
-      const loadedTabs = tabStorage.getTabs();
+      const loadedTabs = await tabStorage.getTabs();
       // Sort by most recently modified
       loadedTabs.sort((a, b) => new Date(b.modified) - new Date(a.modified));
       setTabs(loadedTabs);
     } catch (error) {
       console.error("Error loading tabs:", error);
+      setError("Failed to load your beats. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleDeleteTab = (id) => {
+  const handleDeleteTab = async (id) => {
     if (deleteConfirm === id) {
-      tabStorage.deleteTab(id);
-      setTabs(tabs.filter((tab) => tab.id !== id));
-      setDeleteConfirm(null);
+      setIsLoading(true);
+      try {
+        const success = await tabStorage.deleteTab(id);
+        if (success) {
+          setTabs(tabs.filter((tab) => tab.id !== id));
+        } else {
+          setError("Failed to delete tab. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error deleting tab:", error);
+        setError("Failed to delete tab. Please try again.");
+      } finally {
+        setIsLoading(false);
+        setDeleteConfirm(null);
+      }
     } else {
       setDeleteConfirm(id);
       // Clear confirmation after 3 seconds if not clicked
@@ -123,6 +169,25 @@ export default function TabList() {
         </div>
       </div>
 
+      {/* Error message */}
+      {error && (
+        <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clipRule="evenodd"
+            />
+          </svg>
+          {error}
+        </div>
+      )}
+
       {/* Loading state */}
       {isLoading && (
         <div className="text-center py-12">
@@ -132,7 +197,7 @@ export default function TabList() {
       )}
 
       {/* Empty state with CTA */}
-      {!isLoading && tabs.length === 0 && (
+      {!isLoading && tabs.length === 0 && !error && (
         <div className="empty-state flex flex-col items-center justify-center py-16 px-4 text-center">
           <div className="mb-6">
             <svg

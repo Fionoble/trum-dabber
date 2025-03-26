@@ -44,7 +44,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       {/* Navigation links */}
       <nav className="mt-5 px-2 flex-grow">
         <NavItem
-          href="/editor#new"
+          href="/editor/new"
           isOpen={isOpen}
           label="New Dab"
           isActive={url.includes("/editor/new")}
