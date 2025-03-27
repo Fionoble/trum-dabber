@@ -10,27 +10,43 @@ export const authError = signal(null);
 // Initialize auth on app load
 export async function initAuth() {
   isLoading.value = true;
-  // Get initial session
-  const session = supabase.auth.getSession();
-  user.value = session?.user || null;
-  isAuthenticated.value = !!session?.user;
 
-  // Set up auth state change listener
-  const { data: authListener } = supabase.auth.onAuthStateChange(
-    (_, session) => {
-      user.value = session?.user || null;
-      isAuthenticated.value = !!session?.user;
-    },
-  );
+  try {
+    // Get initial session using getSession() properly
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  isLoading.value = false;
-
-  // Return unsubscribe function
-  return () => {
-    if (authListener?.unsubscribe) {
-      authListener.unsubscribe();
+    // Set user and auth state based on session
+    if (session) {
+      user.value = session.user;
+      isAuthenticated.value = true;
+    } else {
+      user.value = null;
+      isAuthenticated.value = false;
     }
-  };
+
+    // Set up auth state change listener
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log("Auth state changed:", event, session?.user?.email);
+        user.value = session?.user || null;
+        isAuthenticated.value = !!session?.user;
+      },
+    );
+
+    return () => {
+      if (authListener?.subscription?.unsubscribe) {
+        authListener.subscription.unsubscribe();
+      }
+    };
+  } catch (error) {
+    console.error("Auth initialization error:", error);
+    user.value = null;
+    isAuthenticated.value = false;
+  } finally {
+    isLoading.value = false;
+  }
 }
 
 // Sign in with email and password
@@ -48,7 +64,7 @@ export async function signIn(email, password) {
     }
 
     user.value = data.user;
-
+    isAuthenticated.value = true;
     return true;
   } catch (error) {
     authError.value = error.message;

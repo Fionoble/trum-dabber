@@ -11,42 +11,19 @@ export default function TabList() {
   const [error, setError] = useState(null);
   const [migratedMessage, setMigratedMessage] = useState(false);
 
-  // Load tabs from storage
   useEffect(() => {
     loadTabs();
-
-    // Check if we need to migrate tabs from localStorage to Supabase
-    if (isAuthenticated.value) {
-      // checkAndMigrate();
-    }
   }, [isAuthenticated.value]);
-
-  const checkAndMigrate = async () => {
-    // Check if we've already migrated
-    const hasMigrated = localStorage.getItem("trum-dabber-migrated");
-
-    if (!hasMigrated && isAuthenticated.value) {
-      // Perform the migration
-      const success = await tabStorage.migrateLocalTabsToSupabase();
-
-      if (success) {
-        localStorage.setItem("trum-dabber-migrated", "true");
-        setMigratedMessage(true);
-
-        // Hide the message after 5 seconds
-        setTimeout(() => {
-          setMigratedMessage(false);
-        }, 5000);
-
-        // Reload tabs after migration
-        loadTabs();
-      }
-    }
-  };
 
   const loadTabs = async () => {
     setIsLoading(true);
     setError(null);
+
+    if (!isAuthenticated.value) {
+      setTabs([]);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const loadedTabs = await tabStorage.getTabs();

@@ -35,7 +35,6 @@ export class DrumMachine {
             const arrayBuffer = await response.arrayBuffer();
             this.samples[name] =
               await this.audioContext.decodeAudioData(arrayBuffer);
-            console.log(`Loaded sample: ${name}`);
           } catch (err) {
             console.error(`Error loading sample ${name}:`, err);
             // Provide fallback for missing samples - create a simple tone

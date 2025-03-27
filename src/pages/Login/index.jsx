@@ -19,18 +19,14 @@ export default function Login() {
   const resetSuccess = useSignal(false);
   const { route, query } = useLocation();
 
-  if (isAuthenticated.value) route("/");
-
   const redirectPath = new URLSearchParams(query).get("redirect") || "/";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     if (resetMode) {
       setLoading(true);
       const success = await resetPassword(email);
       setLoading(false);
-
       if (success) resetSuccess.value = true;
       return;
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import { DrumMachine } from "../../utils/drumMachine";
 import { useLocation } from "preact-iso";
+import { isAuthenticated } from "../../services/auth";
 import "./styles.scss";
 import { tabStorage } from "../../services/storage";
 
@@ -31,13 +32,18 @@ export default function Editor({ id, newTab }) {
   const [showAdvancedControls, setShowAdvancedControls] = useState(false);
 
   const calculateTotalSteps = () => {
-    return timeSignature.numerator * subdivision * bars;
+    const num = Number(timeSignature.numerator) || 4;
+    const sub = Number(subdivision) || 4;
+    const barCount = Number(bars) || 1;
+    return num * sub * barCount;
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
 
   const createEmptyPattern = (steps) => {
-    return drumSounds.map(() => Array(steps).fill(false));
+    // Make sure steps is a positive integer
+    const validSteps = Math.max(1, Math.floor(Number(steps) || 1));
+    return drumSounds.map(() => Array(validSteps).fill(false));
   };
 
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
@@ -47,9 +53,8 @@ export default function Editor({ id, newTab }) {
   const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
 
-  const location = useLocation();
+  const { route } = useLocation();
 
-  console.log(location.path);
   // Initialize drum machine and load tab if exists
   useEffect(() => {
     const initDrumMachine = async () => {
@@ -61,7 +66,7 @@ export default function Editor({ id, newTab }) {
     initDrumMachine();
 
     if (newTab) {
-      // Handle new tab creation
+      // Handle new tab creation with defaults
       setTabName("New Beat");
       setTabId(null);
       setBpm(120);
@@ -71,40 +76,12 @@ export default function Editor({ id, newTab }) {
       setTotalSteps(calculateTotalSteps());
       setPattern(createEmptyPattern(calculateTotalSteps()));
     } else if (id) {
-      const tab = tabStorage.getTab(id);
-      if (tab) {
-        setTabId(tab.id);
-        setTabName(tab.name);
-        setBpm(tab.bpm || 120);
-
-        // Load time signature and bars
-        if (tab.timeSignature) {
-          setTimeSignature(tab.timeSignature);
-        }
-        if (tab.measures) {
-          setBars(tab.measures);
-        }
-        // Load subdivision if available, default to 4 (16th notes)
-        if (tab.subdivision) {
-          setSubdivision(tab.subdivision);
-        }
-
-        // Calculate total steps based on loaded values
-        const steps =
-          (tab.timeSignature?.numerator || 4) *
-          (tab.subdivision || 4) *
-          (tab.measures || 1);
-        setTotalSteps(steps);
-
-        // Load pattern, or create a new one with the right size if pattern doesn't match
-        if (tab.tracks && tab.tracks[0]?.pattern?.length === steps) {
-          setPattern(tab.tracks.map((track) => track.pattern));
-        } else {
-          // Handle case where time signature changed but pattern doesn't match
-          setPattern(createEmptyPattern(steps));
-        }
+      // Load existing tab if authenticated
+      if (isAuthenticated.value) {
+        loadTab(id);
       } else {
-        route("/editor/new");
+        // Redirect to login if not authenticated
+        route("/login?redirect=" + encodeURIComponent(location.pathname));
       }
     }
 
@@ -128,6 +105,46 @@ export default function Editor({ id, newTab }) {
       resizePattern(newTotalSteps);
     }
   }, [timeSignature, bars, subdivision]);
+
+  const loadTab = async (tabId) => {
+    try {
+      const tab = await tabStorage.getTab(tabId);
+      if (tab) {
+        setTabId(tab.id);
+        setTabName(tab.name);
+        setBpm(tab.bpm || 120);
+        setTimeSignature({
+          numerator: tab.tsNumerator || 4,
+          denominator: tab.tsDenominator || 4,
+        });
+
+        if (tab.measures) {
+          setBars(tab.measures);
+        }
+        // Load subdivision if available, default to 4 (16th notes)
+        // if (tab.subdivision) {
+        //   setSubdivision(tab.subdivision);
+        // }
+
+        // Calculate total steps based on loaded values
+        const steps =
+          (tab.tsNumerator || 4) * (tab.subdivision || 4) * (tab.measures || 1);
+        setTotalSteps(steps);
+
+        // Load pattern
+        if (tab.tracks && tab.tracks[0]?.pattern?.length === steps) {
+          setPattern(tab.tracks.map((track) => track.pattern));
+        } else {
+          // Handle case where time signature changed but pattern doesn't match
+          setPattern(createEmptyPattern(steps));
+        }
+      } else {
+        route("/editor/new");
+      }
+    } catch (error) {
+      console.error("Error loading tab:", error);
+    }
+  };
 
   // Resize pattern when total steps change (preserving existing data)
   const resizePattern = (newStepCount) => {
@@ -351,10 +368,16 @@ export default function Editor({ id, newTab }) {
     if (isPlaying) togglePlayback();
   };
 
-  // Save the current pattern
-  const saveTab = (showNotification = true) => {
+  const saveTab = async (showNotification = true) => {
+    if (!isAuthenticated.value) {
+      // Redirect to login if not authenticated
+      route("/login?redirect=" + encodeURIComponent(location.pathname));
+      return;
+    }
+
     if (showNotification) {
       setIsSaving(true);
+      setSaveSuccess(false);
     }
 
     try {
@@ -362,9 +385,10 @@ export default function Editor({ id, newTab }) {
         id: tabId,
         name: tabName || "Untitled Beat",
         bpm,
-        timeSignature,
+        tsNumerator: timeSignature.numerator,
+        tsDenominator: timeSignature.denominator,
         measures: bars,
-        subdivision, // Save the subdivision value
+        subdivision,
         tracks: pattern.map((patternRow, index) => ({
           id: `track-${index + 1}`,
           name: drumSounds[index],
@@ -375,25 +399,26 @@ export default function Editor({ id, newTab }) {
         volume: 0.7,
       };
 
-      const savedId = tabStorage.saveTab(tab);
-      setTabId(savedId);
+      const savedId = await tabStorage.saveTab(tab);
 
-      // Update URL if it's a new tab
-      if (!tabId) {
-        window.history.replaceState(null, "", `/editor/${savedId}`);
-        route(`/editor/${savedId}`, true);
-      }
+      if (savedId) {
+        setTabId(savedId);
 
-      if (showNotification) {
-        setSaveSuccess(true);
+        // Update URL if it's a new tab
+        if (!tabId) {
+          window.history.replaceState(null, "", `/editor/${savedId}`);
+          route(`/editor/${savedId}`);
+        }
 
-        // Hide success message after 2 seconds
-        setTimeout(() => {
-          setSaveSuccess(false);
-        }, 2000);
+        if (showNotification) {
+          setSaveSuccess(true);
+          setTimeout(() => setSaveSuccess(false), 2000);
+        }
       }
     } catch (error) {
       console.error("Error saving tab:", error);
+      // You could add an error state here to show the user
+      // setError("Failed to save beat. Please try again.");
     } finally {
       if (showNotification) {
         setIsSaving(false);
