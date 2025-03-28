@@ -7,12 +7,10 @@ export const isAuthenticated = signal(false);
 export const isLoading = signal(true);
 export const authError = signal(null);
 
-// Initialize auth on app load
 export async function initAuth() {
   isLoading.value = true;
 
   try {
-    // Get initial session using getSession() properly
     const {
       data: { session },
     } = await supabase.auth.getSession();

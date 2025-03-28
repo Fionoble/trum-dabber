@@ -83,7 +83,7 @@ export class DrumMachine {
         frequency = 100;
         decay = 0.1;
         break;
-      case "clap":
+      case "crash":
         frequency = 300;
         decay = 0.08;
         break;

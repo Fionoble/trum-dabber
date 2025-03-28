@@ -1,9 +1,16 @@
 import { useState, useEffect, useRef } from "preact/hooks";
 import { DrumMachine } from "../../utils/drumMachine";
 import { useLocation } from "preact-iso";
-import { isAuthenticated } from "../../services/auth";
+import { isAuthenticated, isLoading } from "../../services/auth";
 import "./styles.scss";
 import { tabStorage } from "../../services/storage";
+import PlayIcon from "../../assets/icons/Play.svg.jsx";
+import StopIcon from "../../assets/icons/Stop.svg.jsx";
+import SaveIcon from "../../assets/icons/Save.svg.jsx";
+import SpinnerIcon from "../../assets/icons/Spinner.svg.jsx";
+import PlusIcon from "../../assets/icons/Plus.svg.jsx";
+import MinusIcon from "../../assets/icons/Minus.svg.jsx";
+import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
 
 const MAX_BAR_COUNT = 25;
 
@@ -56,7 +63,7 @@ export default function Editor({ id, newTab }) {
   const { route } = useLocation();
 
   // Initialize drum machine and load tab if exists
-  useEffect(() => {
+  useEffect(async () => {
     const initDrumMachine = async () => {
       drumMachineRef.current = new DrumMachine();
       await drumMachineRef.current.loadSamples();
@@ -76,12 +83,12 @@ export default function Editor({ id, newTab }) {
       setTotalSteps(calculateTotalSteps());
       setPattern(createEmptyPattern(calculateTotalSteps()));
     } else if (id) {
-      // Load existing tab if authenticated
-      if (isAuthenticated.value) {
-        loadTab(id);
-      } else {
-        // Redirect to login if not authenticated
-        route("/login?redirect=" + encodeURIComponent(location.pathname));
+      if (!isLoading.value) {
+        if (isAuthenticated.value) {
+          loadTab(id);
+        } else {
+          route("/login?redirect=" + encodeURIComponent(location.pathname));
+        }
       }
     }
 
@@ -92,7 +99,7 @@ export default function Editor({ id, newTab }) {
         drumMachineRef.current.stop();
       }
     };
-  }, []);
+  }, [isLoading.value, isAuthenticated.value]);
 
   // Update total steps when time signature, bars, or subdivision change
   useEffect(() => {
@@ -121,12 +128,7 @@ export default function Editor({ id, newTab }) {
         if (tab.measures) {
           setBars(tab.measures);
         }
-        // Load subdivision if available, default to 4 (16th notes)
-        // if (tab.subdivision) {
-        //   setSubdivision(tab.subdivision);
-        // }
 
-        // Calculate total steps based on loaded values
         const steps =
           (tab.tsNumerator || 4) * (tab.subdivision || 4) * (tab.measures || 1);
         setTotalSteps(steps);
@@ -168,7 +170,6 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  // Handle subdivision changes
   const handleSubdivisionChange = (newSubdivision) => {
     // Store current pattern to preserve existing beats
     const currentPattern = [...pattern];
@@ -229,7 +230,8 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  // Handle cell click
+  // Handlers
+  //
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
     newPattern[row][col] = !newPattern[row][col];
@@ -241,7 +243,80 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  // Play/pause the pattern
+  const handleNameChange = (e) => {
+    setTabName(e.target.value);
+  };
+
+  const handleNameBlur = () => {
+    setIsNameFocused(false);
+    if (tabId) {
+      saveTab(false); // Silent save (no notification)
+    }
+  };
+
+  const handleBpmChange = (e) => {
+    let newBpm = parseInt(e.target.value);
+
+    // Validate BPM range
+    if (isNaN(newBpm)) {
+      newBpm = 120;
+    } else if (newBpm < 40) {
+      newBpm = 40;
+    } else if (newBpm > 240) {
+      newBpm = 240;
+    }
+
+    setBpm(newBpm);
+    stopPlaybackIfPlaying();
+    if (tabId) saveTab(false); // Silent save
+  };
+
+  const handleTimeSignatureChange = (type, value) => {
+    let newValue = parseInt(value);
+
+    if (type === "numerator") {
+      // Validate numerator (typically 2-15)
+      if (isNaN(newValue) || newValue < 1) {
+        newValue = 4;
+      } else if (newValue > 15) {
+        newValue = 15;
+      }
+
+      setTimeSignature({
+        ...timeSignature,
+        numerator: newValue,
+      });
+    } else if (type === "denominator") {
+      // Denominator is typically 2, 4, 8, or 16
+      const validDenominators = [2, 4, 8, 16];
+      if (!validDenominators.includes(newValue)) {
+        newValue = 4;
+      }
+
+      setTimeSignature({
+        ...timeSignature,
+        denominator: newValue,
+      });
+    }
+
+    if (tabId) saveTab(false); // Silent save
+  };
+
+  const handleBarCountChange = (change) => {
+    let newBarCount = bars + change;
+    if (newBarCount < 1) {
+      newBarCount = 1;
+    } else if (newBarCount > MAX_BAR_COUNT) {
+      newBarCount = MAX_BAR_COUNT;
+    }
+    setBars(newBarCount);
+    if (tabId) saveTab(false); //Silent save
+  };
+
+  const stopPlaybackIfPlaying = () => {
+    if (isPlaying) togglePlayback();
+  };
+
   const togglePlayback = () => {
     if (isPlaying) {
       clearInterval(intervalRef.current);
@@ -287,85 +362,6 @@ export default function Editor({ id, newTab }) {
 
       setIsPlaying(true);
     }
-  };
-
-  // Handle tab name change
-  const handleNameChange = (e) => {
-    setTabName(e.target.value);
-  };
-
-  // Handle name input blur (save when user stops editing)
-  const handleNameBlur = () => {
-    setIsNameFocused(false);
-    if (tabId) {
-      saveTab(false); // Silent save (no notification)
-    }
-  };
-
-  // Handle BPM change with input validation
-  const handleBpmChange = (e) => {
-    let newBpm = parseInt(e.target.value);
-
-    // Validate BPM range
-    if (isNaN(newBpm)) {
-      newBpm = 120;
-    } else if (newBpm < 40) {
-      newBpm = 40;
-    } else if (newBpm > 240) {
-      newBpm = 240;
-    }
-
-    setBpm(newBpm);
-    stopPlaybackIfPlaying();
-    if (tabId) saveTab(false); // Silent save
-  };
-
-  // Handles time signature changes
-  const handleTimeSignatureChange = (type, value) => {
-    let newValue = parseInt(value);
-
-    if (type === "numerator") {
-      // Validate numerator (typically 2-15)
-      if (isNaN(newValue) || newValue < 1) {
-        newValue = 4;
-      } else if (newValue > 15) {
-        newValue = 15;
-      }
-
-      setTimeSignature({
-        ...timeSignature,
-        numerator: newValue,
-      });
-    } else if (type === "denominator") {
-      // Denominator is typically 2, 4, 8, or 16
-      const validDenominators = [2, 4, 8, 16];
-      if (!validDenominators.includes(newValue)) {
-        newValue = 4;
-      }
-
-      setTimeSignature({
-        ...timeSignature,
-        denominator: newValue,
-      });
-    }
-
-    if (tabId) saveTab(false); // Silent save
-  };
-
-  const handleBarCountChange = (change) => {
-    let newBarCount = bars + change;
-    if (newBarCount < 1) {
-      newBarCount = 1;
-    } else if (newBarCount > MAX_BAR_COUNT) {
-      newBarCount = MAX_BAR_COUNT;
-    }
-    setBars(newBarCount);
-    if (tabId) saveTab(false); //Silent save
-  };
-
-  // Update playback if currently playing
-  const stopPlaybackIfPlaying = () => {
-    if (isPlaying) togglePlayback();
   };
 
   const saveTab = async (showNotification = true) => {
@@ -426,6 +422,15 @@ export default function Editor({ id, newTab }) {
     }
   };
 
+  if (id && isLoading.value) {
+    return (
+      <div className="text-center py-8">
+        <div className="spinner mb-4"></div>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="editor-container p-4">
       {/* Header with title input and save button */}
@@ -463,38 +468,12 @@ export default function Editor({ id, newTab }) {
           >
             {isSaving ? (
               <>
-                <svg
-                  className="animate-spin h-4 w-4 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
+                <SpinnerIcon />
                 Saving...
               </>
             ) : (
               <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6h5a2 2 0 012 2v7a2 2 0 01-2 2H4a2 2 0 01-2-2V8a2 2 0 012-2h5v5.586l-1.293-1.293z" />
-                </svg>
+                <SaveIcon />
                 Save
               </>
             )}
@@ -511,34 +490,12 @@ export default function Editor({ id, newTab }) {
         >
           {isPlaying ? (
             <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <StopIcon />
               Stop
             </>
           ) : (
             <>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <PlayIcon />
               Play
             </>
           )}
@@ -567,18 +524,7 @@ export default function Editor({ id, newTab }) {
               disabled={bars <= 1}
               className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <MinusIcon />
             </button>
             <span className="px-3 py-1 border-l border-r border-gray-300 min-w-[30px] text-center">
               {bars}
@@ -588,18 +534,7 @@ export default function Editor({ id, newTab }) {
               disabled={bars >= MAX_BAR_COUNT}
               className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-4 w-4"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
+              <PlusIcon />
             </button>
           </div>
         </div>
@@ -609,18 +544,9 @@ export default function Editor({ id, newTab }) {
           className="ml-auto text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm"
         >
           {showAdvancedControls ? "Hide" : "Show"} Advanced Controls
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className={`h-4 w-4 transition-transform ${showAdvancedControls ? "rotate-180" : ""}`}
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
-              clipRule="evenodd"
-            />
-          </svg>
+          <span className={`transition-transform ${showAdvancedControls ? "rotate-180" : ""} inline-block`}>
+            <ChevronDownIcon />
+          </span>
         </button>
       </div>
 
