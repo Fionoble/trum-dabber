@@ -140,7 +140,6 @@ export class DrumMachine {
     });
   }
 
-  // Completely stop all audio
   stop() {
     // Quick volume fade out to avoid clicks
     const now = this.audioContext.currentTime;
@@ -152,5 +151,28 @@ export class DrumMachine {
     setTimeout(() => {
       this.masterGain.gain.value = 0.7;
     }, 100);
+
+    // Suspend audio context after stopping (reduces resource usage)
+    setTimeout(() => {
+      if (this.audioContext && this.audioContext.state === "running") {
+        this.audioContext.suspend().catch((err) => {
+          console.warn("Could not suspend audio context:", err);
+        });
+      }
+    }, 200);
+  }
+
+  // Add a cleanup method for complete destruction
+  cleanup() {
+    this.stop();
+
+    // Close the audio context completely when no longer needed
+    // Note: Only call this when you're truly done with the context
+    // as creating a new one is resource-intensive
+    if (this.audioContext && this.audioContext.state !== "closed") {
+      this.audioContext.close().catch((err) => {
+        console.warn("Could not close audio context:", err);
+      });
+    }
   }
 }

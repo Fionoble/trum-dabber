@@ -11,6 +11,7 @@ import SpinnerIcon from "../../assets/icons/Spinner.svg.jsx";
 import PlusIcon from "../../assets/icons/Plus.svg.jsx";
 import MinusIcon from "../../assets/icons/Minus.svg.jsx";
 import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
+import DuplicateIcon from "../../assets/icons/Duplicate.svg.jsx";
 
 const MAX_BAR_COUNT = 25;
 
@@ -92,12 +93,34 @@ export default function Editor({ id, newTab }) {
       }
     }
 
-    // Cleanup on component unmount
+    const handleVisibilityChange = () => {
+      if (document.hidden && isPlaying) {
+        // User switched tabs or minimized window
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        if (drumMachineRef.current) {
+          drumMachineRef.current.stop();
+        }
+        setIsPlaying(false);
+        setCurrentStep(-1);
+      }
+    };
+
+    const handleBeforeUnload = () => {
+      if (drumMachineRef.current) {
+        drumMachineRef.current.stop();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (drumMachineRef.current) {
         drumMachineRef.current.stop();
       }
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isLoading.value, isAuthenticated.value]);
 
@@ -112,6 +135,34 @@ export default function Editor({ id, newTab }) {
       resizePattern(newTotalSteps);
     }
   }, [timeSignature, bars, subdivision]);
+
+  const duplicateBar = (barIndex) => {
+    // Stop playback if in progress to avoid issues
+    if (isPlaying) togglePlayback();
+
+    // Calculate steps per bar
+    const stepsPerBar = timeSignature.numerator * subdivision;
+
+    // Create a new pattern with the duplicated bar
+    const newPattern = pattern.map((row) => {
+      // Get the steps for the bar to duplicate
+      const barStart = barIndex * stepsPerBar;
+      const barEnd = barStart + stepsPerBar;
+      const barData = row.slice(barStart, barEnd);
+
+      // Create a new row with the duplicated bar inserted after the current one
+      return [...row.slice(0, barEnd), ...barData, ...row.slice(barEnd)];
+    });
+
+    // Update pattern with duplicated bar
+    setPattern(newPattern);
+
+    // Increment bar count
+    setBars(bars + 1);
+
+    // If there's a tab ID, save changes
+    if (tabId) saveTab(false); // Silent save
+  };
 
   const loadTab = async (tabId) => {
     try {
@@ -468,7 +519,9 @@ export default function Editor({ id, newTab }) {
           >
             {isSaving ? (
               <>
-                <SpinnerIcon />
+                <span className="text-white">
+                  <SpinnerIcon />
+                </span>
                 Saving...
               </>
             ) : (
@@ -544,7 +597,9 @@ export default function Editor({ id, newTab }) {
           className="ml-auto text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm"
         >
           {showAdvancedControls ? "Hide" : "Show"} Advanced Controls
-          <span className={`transition-transform ${showAdvancedControls ? "rotate-180" : ""} inline-block`}>
+          <span
+            className={`transition-transform ${showAdvancedControls ? "rotate-180" : ""} inline-block`}
+          >
             <ChevronDownIcon />
           </span>
         </button>
@@ -654,6 +709,17 @@ export default function Editor({ id, newTab }) {
                   <div key={barIndex} className="bar-section">
                     {/* Bar number indicator */}
                     <div className="bar-number">{barIndex + 1}</div>
+
+                    <div className="bar-actions">
+                      <button
+                        onClick={() => duplicateBar(barIndex)}
+                        className="duplicate-bar-btn"
+                        title="Duplicate this bar"
+                        aria-label="Duplicate bar"
+                      >
+                        <DuplicateIcon />
+                      </button>
+                    </div>
 
                     {/* Beat markers for this bar */}
                     <div className="measure-indicators">

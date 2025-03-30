@@ -157,7 +157,9 @@ export default function Login() {
             >
               {loading ? (
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
-                  <SpinnerIcon />
+                  <span className="text-white">
+                    <SpinnerIcon />
+                  </span>
                 </span>
               ) : (
                 <span className="absolute left-0 inset-y-0 flex items-center pl-3">
@@ -189,7 +191,9 @@ export default function Login() {
                   className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   {googleLoading ? (
-                    <SpinnerIcon />
+                    <span className="text-gray-600 mr-2">
+                      <SpinnerIcon />
+                    </span>
                   ) : (
                     <>
                       <GoogleIcon />

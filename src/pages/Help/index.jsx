@@ -371,7 +371,9 @@ export default function Help() {
               >
                 {isSubmitting ? (
                   <>
-                    <SpinnerIcon />
+                    <span className="text-white -ml-1 mr-2">
+                      <SpinnerIcon />
+                    </span>
                     Submitting...
                   </>
                 ) : (

@@ -98,11 +98,7 @@ export default function TabList() {
             aria-label={`Switch to ${viewMode === "grid" ? "list" : "grid"} view`}
             title={`Switch to ${viewMode === "grid" ? "list" : "grid"} view`}
           >
-            {viewMode === "grid" ? (
-              <MenuIcon />
-            ) : (
-              <GridViewIcon />
-            )}
+            {viewMode === "grid" ? <MenuIcon /> : <GridViewIcon />}
           </button>
 
           {/* Create new tab button */}

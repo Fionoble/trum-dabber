@@ -20,6 +20,24 @@ function App() {
     return cleanup;
   }, []);
 
+  useEffect(() => {
+    const handleRouteChange = () => {
+      const audioContexts = document.querySelectorAll("audio");
+      audioContexts.forEach((audio) => {
+        if (!audio.paused) {
+          audio.pause();
+        }
+      });
+      if (window.globalDrumMachine) {
+        window.globalDrumMachine.stop();
+      }
+    };
+    window.addEventListener("popstate", handleRouteChange);
+    return () => {
+      window.removeEventListener("popstate", handleRouteChange);
+    };
+  }, []);
+
   return (
     <LocationProvider>
       <Frame>
