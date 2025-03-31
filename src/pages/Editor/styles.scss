@@ -155,6 +155,23 @@
     background-color: #4caf50;
     border-color: #2e7d32;
   }
+  
+  &.open-hihat {
+    background-color: #8bc34a;
+    border-color: #689f38;
+    position: relative;
+    
+    &::after {
+      content: "O";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      color: white;
+      font-weight: bold;
+    }
+  }
 
   &.playing {
     box-shadow: 0 0 0 2px rgba(66, 135, 245, 0.6);

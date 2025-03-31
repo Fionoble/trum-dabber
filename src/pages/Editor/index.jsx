@@ -19,6 +19,18 @@ const SUBDIVISION = 8;
 export default function Editor({ id, newTab }) {
   // Define drum sounds and pattern
   const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
+  
+  // Define special tracks that can have multiple states
+  const specialTracks = {
+    0: { // hihat track index
+      states: [false, "hihat", "hihatOpen"],
+      nextState: {
+        false: "hihat",
+        "hihat": "hihatOpen",
+        "hihatOpen": false
+      }
+    }
+  };
 
   // States
   const [isLoaded, setIsLoaded] = useState(false);
@@ -50,7 +62,13 @@ export default function Editor({ id, newTab }) {
   const createEmptyPattern = (steps) => {
     // Make sure steps is a positive integer
     const validSteps = Math.max(1, Math.floor(Number(steps) || 1));
-    return drumSounds.map(() => Array(validSteps).fill(false));
+    return drumSounds.map((sound, index) => {
+      // For special tracks with multiple states, we need to store string values
+      if (specialTracks[index]) {
+        return Array(validSteps).fill(false);
+      }
+      return Array(validSteps).fill(false);
+    });
   };
 
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
@@ -224,12 +242,31 @@ export default function Editor({ id, newTab }) {
   //
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
-    newPattern[row][col] = !newPattern[row][col];
-    setPattern(newPattern);
-
-    // Play the sound when activating a cell
-    if (newPattern[row][col] && drumMachineRef.current) {
-      drumMachineRef.current.playSound(drumSounds[row]);
+    
+    // Handle special tracks with multiple states
+    if (specialTracks[row]) {
+      const currentState = newPattern[row][col];
+      const track = specialTracks[row];
+      const nextState = track.nextState[currentState];
+      
+      newPattern[row][col] = nextState;
+      setPattern(newPattern);
+      
+      // Play the appropriate sound when activating a cell
+      if (nextState && drumMachineRef.current) {
+        // This will automatically choke other sounds in the same group
+        drumMachineRef.current.playSound(nextState);
+      }
+    } else {
+      // Handle regular tracks (binary on/off)
+      const newState = !newPattern[row][col];
+      newPattern[row][col] = newState;
+      setPattern(newPattern);
+      
+      // Play the sound when activating a cell
+      if (newState && drumMachineRef.current) {
+        drumMachineRef.current.playSound(drumSounds[row]);
+      }
     }
   };
 
@@ -325,12 +362,11 @@ export default function Editor({ id, newTab }) {
       intervalRef.current = setInterval(() => {
         setCurrentStep(step);
 
-        // Play sounds for current step
-        pattern.forEach((row, rowIndex) => {
-          if (row[step] && drumMachineRef.current) {
-            drumMachineRef.current.playSound(drumSounds[rowIndex]);
-          }
-        });
+        // Play sounds for current step using the playStep method
+        // This ensures any choke functionality works properly
+        if (drumMachineRef.current) {
+          drumMachineRef.current.playStep(pattern, step, drumSounds);
+        }
 
         step = (step + 1) % totalPatternSteps;
 
@@ -373,12 +409,27 @@ export default function Editor({ id, newTab }) {
         tsNumerator: timeSignature.numerator,
         tsDenominator: timeSignature.denominator,
         measures: bars,
-        tracks: pattern.map((patternRow, index) => ({
-          id: `track-${index + 1}`,
-          name: drumSounds[index],
-          sound: drumSounds[index],
-          pattern: patternRow,
-        })),
+        tracks: pattern.map((patternRow, index) => {
+          // Handle special tracks like hihat
+          if (specialTracks[index]) {
+            return {
+              id: `track-${index + 1}`,
+              name: drumSounds[index],
+              sound: drumSounds[index],
+              pattern: patternRow,
+              // Add metadata for special track states
+              states: specialTracks[index].states,
+            };
+          }
+          
+          // Regular tracks
+          return {
+            id: `track-${index + 1}`,
+            name: drumSounds[index],
+            sound: drumSounds[index],
+            pattern: patternRow,
+          };
+        }),
         stepsPerMeasure: timeSignature.numerator * SUBDIVISION,
         volume: 0.7,
       };
@@ -660,6 +711,7 @@ export default function Editor({ id, newTab }) {
                                     key={cellIndex}
                                     className={`drum-cell
                                     ${cell ? "active" : ""}
+                                    ${cell === "hihatOpen" ? "open-hihat" : ""}
                                     ${currentStep === globalColIndex ? "playing" : ""}
                                     ${isBeatStart ? "beat-start" : ""}
                                     ${cellIndex === 0 ? "bar-start" : ""}
@@ -667,7 +719,7 @@ export default function Editor({ id, newTab }) {
                                     onClick={() =>
                                       handleCellClick(rowIndex, globalColIndex)
                                     }
-                                    aria-label={`${drumSounds[rowIndex]} bar ${barIndex + 1}, step ${cellIndex + 1}`}
+                                    aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${cellIndex + 1}`}
                                   />
                                 );
                               })}
