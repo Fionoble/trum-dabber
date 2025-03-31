@@ -14,6 +14,7 @@ import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
 import DuplicateIcon from "../../assets/icons/Duplicate.svg.jsx";
 
 const MAX_BAR_COUNT = 25;
+const SUBDIVISION = 8;
 
 export default function Editor({ id, newTab }) {
   // Define drum sounds and pattern
@@ -29,7 +30,6 @@ export default function Editor({ id, newTab }) {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
-  const [subdivision, setSubdivision] = useState(4); // Default: 16th notes (4 subdivisions per beat)
 
   // Time signature and bars
   const [timeSignature, setTimeSignature] = useState({
@@ -41,9 +41,8 @@ export default function Editor({ id, newTab }) {
 
   const calculateTotalSteps = () => {
     const num = Number(timeSignature.numerator) || 4;
-    const sub = Number(subdivision) || 4;
     const barCount = Number(bars) || 1;
-    return num * sub * barCount;
+    return num * SUBDIVISION * barCount;
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
@@ -80,7 +79,6 @@ export default function Editor({ id, newTab }) {
       setBpm(120);
       setTimeSignature({ numerator: 4, denominator: 4 });
       setBars(1);
-      setSubdivision(4);
       setTotalSteps(calculateTotalSteps());
       setPattern(createEmptyPattern(calculateTotalSteps()));
     } else if (id) {
@@ -124,7 +122,7 @@ export default function Editor({ id, newTab }) {
     };
   }, [isLoading.value, isAuthenticated.value]);
 
-  // Update total steps when time signature, bars, or subdivision change
+  // Update total steps when time signature or bar change
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
 
@@ -134,14 +132,14 @@ export default function Editor({ id, newTab }) {
       // Resize the pattern to match the new step count
       resizePattern(newTotalSteps);
     }
-  }, [timeSignature, bars, subdivision]);
+  }, [timeSignature, bars]);
 
   const duplicateBar = (barIndex) => {
     // Stop playback if in progress to avoid issues
     if (isPlaying) togglePlayback();
 
     // Calculate steps per bar
-    const stepsPerBar = timeSignature.numerator * subdivision;
+    const stepsPerBar = timeSignature.numerator * SUBDIVISION;
 
     // Create a new pattern with the duplicated bar
     const newPattern = pattern.map((row) => {
@@ -167,6 +165,7 @@ export default function Editor({ id, newTab }) {
   const loadTab = async (tabId) => {
     try {
       const tab = await tabStorage.getTab(tabId);
+      console.log(tab);
       if (tab) {
         setTabId(tab.id);
         setTabName(tab.name);
@@ -181,7 +180,7 @@ export default function Editor({ id, newTab }) {
         }
 
         const steps =
-          (tab.tsNumerator || 4) * (tab.subdivision || 4) * (tab.measures || 1);
+          (tab.tsNumerator || 4) * SUBDIVISION * (tab.measures || 1);
         setTotalSteps(steps);
 
         // Load pattern
@@ -218,66 +217,6 @@ export default function Editor({ id, newTab }) {
     if (isPlaying) {
       togglePlayback();
       setCurrentStep(-1);
-    }
-  };
-
-  const handleSubdivisionChange = (newSubdivision) => {
-    // Store current pattern to preserve existing beats
-    const currentPattern = [...pattern];
-
-    // Calculate new total steps based on new subdivision
-    const beatsPerBar = timeSignature.numerator;
-    const oldSubdivisionsPerBeat = subdivision;
-    const newSubdivisionsPerBeat = newSubdivision;
-
-    const oldTotalSteps = beatsPerBar * oldSubdivisionsPerBeat * bars;
-    const newTotalSteps = beatsPerBar * newSubdivisionsPerBeat * bars;
-
-    // Create new pattern with adjusted size
-    const newPattern = drumSounds.map((_, rowIndex) => {
-      const newRow = Array(newTotalSteps).fill(false);
-
-      // Map old beats to new positions
-      if (newSubdivisionsPerBeat > oldSubdivisionsPerBeat) {
-        // Expanding: spread existing beats out
-        const ratio = newSubdivisionsPerBeat / oldSubdivisionsPerBeat;
-
-        for (let i = 0; i < oldTotalSteps; i++) {
-          if (currentPattern[rowIndex][i]) {
-            newRow[Math.floor(i * ratio)] = true;
-          }
-        }
-      } else {
-        // Contracting: combine beats (with potential data loss)
-        const ratio = oldSubdivisionsPerBeat / newSubdivisionsPerBeat;
-
-        for (let i = 0; i < oldTotalSteps; i++) {
-          if (currentPattern[rowIndex][i]) {
-            const newIndex = Math.floor(i / ratio);
-            if (newIndex < newTotalSteps) {
-              newRow[newIndex] = true;
-            }
-          }
-        }
-      }
-
-      return newRow;
-    });
-
-    // Update state
-    setSubdivision(newSubdivision);
-    setTotalSteps(newTotalSteps);
-    setPattern(newPattern);
-
-    // If playing, restart to avoid issues
-    if (isPlaying) {
-      togglePlayback();
-      setCurrentStep(-1);
-    }
-
-    // Save if tab exists
-    if (tabId) {
-      saveTab(false);
     }
   };
 
@@ -377,9 +316,8 @@ export default function Editor({ id, newTab }) {
       }
       setIsPlaying(false);
     } else {
-      // Calculate step time based on BPM, time signature, and subdivision
       const quarterNoteTime = (60 * 1000) / bpm;
-      const stepTime = quarterNoteTime / subdivision;
+      const stepTime = quarterNoteTime / SUBDIVISION;
 
       let step = 0;
       const totalPatternSteps = calculateTotalSteps();
@@ -397,7 +335,7 @@ export default function Editor({ id, newTab }) {
         step = (step + 1) % totalPatternSteps;
 
         // Scroll to the bar containing the current step if needed
-        const stepsPerBar = timeSignature.numerator * subdivision;
+        const stepsPerBar = timeSignature.numerator * 4;
         const currentBarIndex = Math.floor(step / stepsPerBar);
 
         // Only scroll on larger screens where bars are arranged vertically
@@ -435,14 +373,13 @@ export default function Editor({ id, newTab }) {
         tsNumerator: timeSignature.numerator,
         tsDenominator: timeSignature.denominator,
         measures: bars,
-        subdivision,
         tracks: pattern.map((patternRow, index) => ({
           id: `track-${index + 1}`,
           name: drumSounds[index],
           sound: drumSounds[index],
           pattern: patternRow,
         })),
-        stepsPerMeasure: timeSignature.numerator * subdivision,
+        stepsPerMeasure: timeSignature.numerator * SUBDIVISION,
         volume: 0.7,
       };
 
@@ -649,32 +586,6 @@ export default function Editor({ id, newTab }) {
               </div>
             </div>
 
-            {/* Note Resolution Control */}
-            <div className="subdivision-control flex items-center gap-2">
-              <label className="text-sm text-gray-600">Note Resolution:</label>
-              <div className="flex">
-                <select
-                  value={subdivision}
-                  onChange={(e) =>
-                    handleSubdivisionChange(parseInt(e.target.value))
-                  }
-                  className="p-1 border border-gray-300 rounded-md"
-                >
-                  <option value="2">8th Notes</option>
-                  <option value="4">16th Notes</option>
-                  <option value="8">32nd Notes</option>
-                </select>
-              </div>
-              <span className="text-xs text-gray-500">
-                {subdivision === 2
-                  ? "8th"
-                  : subdivision === 4
-                    ? "16th"
-                    : "32nd"}{" "}
-                notes
-              </span>
-            </div>
-
             <div className="text-xs text-gray-500 mt-1 col-span-full">
               Note: Changing time signature, bar count, or note resolution will
               resize your pattern. Existing beats will be preserved when
@@ -701,7 +612,7 @@ export default function Editor({ id, newTab }) {
               .fill(0)
               .map((_, barIndex) => {
                 // Calculate step range for this bar
-                const stepsPerBar = timeSignature.numerator * subdivision;
+                const stepsPerBar = timeSignature.numerator * SUBDIVISION;
                 const startStep = barIndex * stepsPerBar;
                 const endStep = startStep + stepsPerBar;
 
@@ -721,44 +632,6 @@ export default function Editor({ id, newTab }) {
                       </button>
                     </div>
 
-                    {/* Beat markers for this bar */}
-                    <div className="measure-indicators">
-                      <div className="beat-markers">
-                        {Array(timeSignature.numerator)
-                          .fill(0)
-                          .map((_, beatIndex) => (
-                            <div key={beatIndex} className="beat-marker-group">
-                              {Array(subdivision)
-                                .fill(0)
-                                .map((_, subIndex) => {
-                                  const step =
-                                    beatIndex * subdivision + subIndex;
-                                  // Determine what type of marker to display
-                                  const isMainBeat = subIndex === 0;
-                                  const isEighthNote =
-                                    subdivision >= 2 &&
-                                    subIndex % (subdivision / 2) === 0;
-                                  const isSixteenthNote =
-                                    subdivision >= 4 &&
-                                    subIndex % (subdivision / 4) === 0;
-
-                                  return (
-                                    <div
-                                      key={step}
-                                      className={`step-marker
-                                        ${isMainBeat ? "beat-marker" : ""}
-                                        ${!isMainBeat && isEighthNote ? "eighth-marker" : ""}
-                                        ${!isMainBeat && !isEighthNote && isSixteenthNote ? "sixteenth-marker" : ""}`}
-                                    >
-                                      {isMainBeat ? beatIndex + 1 : ""}
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
                     {/* Drum rows for this bar */}
                     <div className="drum-rows-container">
                       {pattern.map((row, rowIndex) => (
@@ -771,9 +644,9 @@ export default function Editor({ id, newTab }) {
                           ) : null}
                           {/* Grid cells for this bar */}
                           <div
-                            className={`drum-grid resolution-${subdivision}`}
+                            className={`drum-grid resolution-${SUBDIVISION}`}
                             style={{
-                              width: `${timeSignature.numerator * subdivision * 29}px`,
+                              width: `${timeSignature.numerator * SUBDIVISION * 29}px`,
                             }}
                           >
                             {row

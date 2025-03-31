@@ -134,8 +134,8 @@
 // Individual cell styling
 .drum-cell {
   flex: 1;
-  min-width: 25px;
-  min-height: 25px;
+  min-width: 20px;
+  min-height: 20px;
   aspect-ratio: 1;
   border: 1px solid #ccc;
   border-radius: 2px;
@@ -322,8 +322,8 @@ input[type="range"]::-moz-range-thumb:hover {
   }
 
   .drum-cell {
-    min-width: 22px;
-    min-height: 22px;
+    min-width: 15px;
+    min-height: 15px;
   }
 
   .drum-grid {
@@ -389,17 +389,6 @@ input[type="range"]::-moz-range-thumb:hover {
     bottom: -8px;
     left: 50%;
     transform: translateX(-50%);
-  }
-}
-
-// Additional styling for 32nd notes
-.drum-grid {
-  // Existing styles...
-
-  // Adjust spacing for higher resolution
-  &.resolution-8 .drum-cell {
-    min-width: 14px;
-    min-height: 25px;
   }
 }
 
