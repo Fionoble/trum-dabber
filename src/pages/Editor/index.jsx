@@ -814,57 +814,62 @@ export default function Editor({ id, newTab }) {
                     </div>
 
                     {/* Drum rows for this bar */}
-                    <div className="drum-rows-container">
-                      {pattern.map((row, rowIndex) => (
-                        <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
-                          {/* Instrument name with icon - show only in first bar or on smaller screens */}
-                          {barIndex === 0 ? (
-                            <div className="drum-name">
-                              <div 
-                                className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
-                                onClick={(e) => handleTrackIconClick(e, rowIndex)}
-                              >
-                                {(() => {
-                                  const IconComponent = InstrumentIcons[drumSounds[rowIndex]] || InstrumentIcons.tom;
-                                  return <IconComponent />;
-                                })()}
-                                <div className="track-tooltip">{drumSounds[rowIndex]}</div>
+                    <div className="bar-content-wrapper">
+                      <div className="drum-names-column">
+                        {pattern.map((_, rowIndex) => (
+                          <div key={rowIndex} className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
+                            {barIndex === 0 ? (
+                              <div className="drum-name">
+                                <div 
+                                  className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
+                                  onClick={(e) => handleTrackIconClick(e, rowIndex)}
+                                >
+                                  {(() => {
+                                    const IconComponent = InstrumentIcons[drumSounds[rowIndex]] || InstrumentIcons.tom;
+                                    return <IconComponent />;
+                                  })()}
+                                  <div className="track-tooltip">{drumSounds[rowIndex]}</div>
+                                </div>
+                              </div>
+                            ) : null}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="scrollable-grid-container">
+                        <div className="drum-rows-container">
+                          {pattern.map((row, rowIndex) => (
+                            <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
+                              {/* Grid cells for this bar */}
+                              <div className={`drum-grid resolution-${SUBDIVISION}`}>
+                                {row
+                                  .slice(startStep, endStep)
+                                  .map((cell, cellIndex) => {
+                                    const globalColIndex = startStep + cellIndex;
+                                    const isBeatStart = cellIndex % 4 === 0;
+
+                                    return (
+                                      <button
+                                        key={cellIndex}
+                                        className={`drum-cell
+                                        ${cell ? "active" : ""}
+                                        ${cell === "hihatOpen" ? "open-hihat" : ""}
+                                        ${currentStep === globalColIndex ? "playing" : ""}
+                                        ${isBeatStart ? "beat-start" : ""}
+                                        ${cellIndex === 0 ? "bar-start" : ""}
+                                      `}
+                                        onClick={() =>
+                                          handleCellClick(rowIndex, globalColIndex)
+                                        }
+                                        aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${cellIndex + 1}`}
+                                      />
+                                    );
+                                  })}
                               </div>
                             </div>
-                          ) : null}
-                          {/* Grid cells for this bar */}
-                          <div
-                            className={`drum-grid resolution-${SUBDIVISION}`}
-                            style={{
-                              width: `${timeSignature.numerator * SUBDIVISION * 29}px`,
-                            }}
-                          >
-                            {row
-                              .slice(startStep, endStep)
-                              .map((cell, cellIndex) => {
-                                const globalColIndex = startStep + cellIndex;
-                                const isBeatStart = cellIndex % 4 === 0;
-
-                                return (
-                                  <button
-                                    key={cellIndex}
-                                    className={`drum-cell
-                                    ${cell ? "active" : ""}
-                                    ${cell === "hihatOpen" ? "open-hihat" : ""}
-                                    ${currentStep === globalColIndex ? "playing" : ""}
-                                    ${isBeatStart ? "beat-start" : ""}
-                                    ${cellIndex === 0 ? "bar-start" : ""}
-                                  `}
-                                    onClick={() =>
-                                      handleCellClick(rowIndex, globalColIndex)
-                                    }
-                                    aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${cellIndex + 1}`}
-                                  />
-                                );
-                              })}
-                          </div>
+                          ))}
                         </div>
-                      ))}
+                      </div>
                     </div>
                   </div>
                 );

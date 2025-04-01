@@ -1,24 +1,48 @@
 import { supabase } from "./supabase";
 import { user, isAuthenticated } from "./auth";
 
-// Key for storing instrument configuration in localStorage
-const INSTRUMENTS_KEY = "trum-dabber-instruments";
-const DEFAULT_INSTRUMENTS = ["hihat", "hiTom", "snare", "crash", "kick", "floorTom"];
+const DEFAULT_INSTRUMENTS = [
+  "hihat",
+  "hiTom",
+  "snare",
+  "crash",
+  "kick",
+  "floorTom",
+];
+const SETTINGS_TABLE = "user_settings";
 
 export class TabStorage {
   constructor() {
     this.tableName = "tabs";
+    this.settingsTable = SETTINGS_TABLE;
   }
-  
+
   // Get user-configured instruments or return default ones
   async getUserInstruments() {
     try {
-      const settings = localStorage.getItem(INSTRUMENTS_KEY);
-      if (settings) {
-        return JSON.parse(settings);
+      // Return default instruments if not logged in
+      if (!isAuthenticated.value) {
+        return DEFAULT_INSTRUMENTS;
       }
-      // Return default instruments if none are saved
-      return DEFAULT_INSTRUMENTS;
+
+      // Try to get user's instrument settings from Supabase
+      const { data, error } = await supabase
+        .from(this.settingsTable)
+        .select("settings")
+        .eq("user_id", user.value.id)
+        .eq("key", "instruments")
+        .single();
+
+      if (error || !data) {
+        // If no settings found or there was an error, use default
+        console.log("No saved instruments found, using defaults");
+        // Save the defaults for next time
+        this.saveUserInstruments(DEFAULT_INSTRUMENTS);
+        return DEFAULT_INSTRUMENTS;
+      }
+
+      // Return the instruments from the settings
+      return data.settings.instruments || DEFAULT_INSTRUMENTS;
     } catch (error) {
       console.error("Error getting instruments:", error);
       // Return default instruments on error
@@ -29,7 +53,56 @@ export class TabStorage {
   // Save user-configured instruments
   async saveUserInstruments(instruments) {
     try {
-      localStorage.setItem(INSTRUMENTS_KEY, JSON.stringify(instruments));
+      // Don't save if not logged in
+      if (!isAuthenticated.value) {
+        console.log("User not authenticated, can't save instruments");
+        return false;
+      }
+
+      // Check if a settings record already exists
+      const { data: existingData, error: checkError } = await supabase
+        .from(this.settingsTable)
+        .select("id")
+        .eq("user_id", user.value.id)
+        .eq("key", "instruments")
+        .single();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        // PGRST116 is "No rows returned"
+        console.error("Error checking settings:", checkError);
+        return false;
+      }
+
+      if (existingData) {
+        // Update existing settings
+        const { error } = await supabase
+          .from(this.settingsTable)
+          .update({
+            settings: { instruments },
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingData.id);
+
+        if (error) {
+          console.error("Error updating instruments:", error);
+          return false;
+        }
+      } else {
+        // Insert new settings
+        const { error } = await supabase.from(this.settingsTable).insert({
+          user_id: user.value.id,
+          key: "instruments",
+          settings: { instruments },
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          console.error("Error inserting instruments:", error);
+          return false;
+        }
+      }
+
       return true;
     } catch (error) {
       console.error("Error saving instruments:", error);
@@ -227,9 +300,11 @@ export class TabStorage {
         sound: sound,
         pattern: Array(steps).fill(false),
         // Add special states for hihat
-        ...(sound === 'hihat' ? {
-          states: [false, "hihat", "hihatOpen"]
-        } : {})
+        ...(sound === "hihat"
+          ? {
+              states: [false, "hihat", "hihatOpen"],
+            }
+          : {}),
       })),
       measures: 1,
       stepsPerMeasure: 16,
