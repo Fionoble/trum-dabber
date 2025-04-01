@@ -12,25 +12,49 @@ import PlusIcon from "../../assets/icons/Plus.svg.jsx";
 import MinusIcon from "../../assets/icons/Minus.svg.jsx";
 import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
 import DuplicateIcon from "../../assets/icons/Duplicate.svg.jsx";
+import EyeIcon from "../../assets/icons/Eye.svg.jsx";
+import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
+import SoloIcon from "../../assets/icons/Solo.svg.jsx";
+import GridIcon from "../../assets/icons/Grid.svg.jsx";
+import CloseIcon from "../../assets/icons/Close.svg.jsx";
+import InstrumentIcons from "../../assets/icons/instruments";
 
 const MAX_BAR_COUNT = 25;
 const SUBDIVISION = 8;
 
 export default function Editor({ id, newTab }) {
   // Define drum sounds and pattern
-  const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
+  const defaultDrumSounds = ["hihat", "hiTom", "snare", "crash", "kick", "floorTom"];
+  const [drumSounds, setDrumSounds] = useState(defaultDrumSounds);
+  
+  // Instrument visibility state
+  const [hiddenTracks, setHiddenTracks] = useState({});
+  const [trackContextMenu, setTrackContextMenu] = useState({ visible: false, trackIndex: null, x: 0, y: 0 });
   
   // Define special tracks that can have multiple states
-  const specialTracks = {
-    0: { // hihat track index
-      states: [false, "hihat", "hihatOpen"],
-      nextState: {
-        false: "hihat",
-        "hihat": "hihatOpen",
-        "hihatOpen": false
-      }
+  // This is dynamically calculated based on the current instrument order
+  const [specialTracks, setSpecialTracks] = useState({});
+  
+  // Update special tracks when instrument order changes
+  useEffect(() => {
+    // Find the index of the hihat in the current instrument order
+    const hihatIndex = drumSounds.indexOf("hihat");
+    
+    if (hihatIndex !== -1) {
+      setSpecialTracks({
+        [hihatIndex]: { // hihat track index - dynamically determined
+          states: [false, "hihat", "hihatOpen"],
+          nextState: {
+            false: "hihat",
+            "hihat": "hihatOpen",
+            "hihatOpen": false
+          }
+        }
+      });
+    } else {
+      setSpecialTracks({});
     }
-  };
+  }, [drumSounds]);
 
   // States
   const [isLoaded, setIsLoaded] = useState(false);
@@ -87,8 +111,21 @@ export default function Editor({ id, newTab }) {
       await drumMachineRef.current.loadSamples();
       setIsLoaded(true);
     };
+    
+    // Load user's configured instruments
+    const loadInstruments = async () => {
+      try {
+        const savedInstruments = await tabStorage.getUserInstruments();
+        setDrumSounds(savedInstruments);
+      } catch (error) {
+        console.error("Error loading instruments:", error);
+        // Use default instruments if there's an error
+        setDrumSounds(defaultDrumSounds);
+      }
+    };
 
     initDrumMachine();
+    loadInstruments();
 
     if (newTab) {
       // Handle new tab creation with defaults
@@ -201,11 +238,49 @@ export default function Editor({ id, newTab }) {
           (tab.tsNumerator || 4) * SUBDIVISION * (tab.measures || 1);
         setTotalSteps(steps);
 
-        // Load pattern
-        if (tab.tracks && tab.tracks[0]?.pattern?.length === steps) {
-          setPattern(tab.tracks.map((track) => track.pattern));
+        // Handle instrument mapping when loading
+        if (tab.tracks && tab.tracks.length > 0) {
+          // Build a mapping of instrument sounds to their patterns
+          const trackMap = {};
+          tab.tracks.forEach(track => {
+            if (track.sound && track.pattern) {
+              trackMap[track.sound] = track.pattern;
+            }
+          });
+          
+          // Check if the tab has stored instrument order
+          let currentSounds;
+          if (tab.instrumentOrder && Array.isArray(tab.instrumentOrder) && tab.instrumentOrder.length > 0) {
+            // Use the stored order, but add any missing instruments that might have been added since
+            const userInstruments = await tabStorage.getUserInstruments();
+            currentSounds = [...tab.instrumentOrder];
+            
+            // Add any new instruments that weren't in the original tab
+            userInstruments.forEach(sound => {
+              if (!currentSounds.includes(sound)) {
+                currentSounds.push(sound);
+              }
+            });
+          } else {
+            // Fall back to user's current instrument configuration
+            currentSounds = await tabStorage.getUserInstruments();
+          }
+          setDrumSounds(currentSounds);
+          
+          // Create a pattern that matches the current instrument order
+          const newPattern = currentSounds.map(sound => {
+            // If we have this sound in the saved tab, use its pattern
+            if (trackMap[sound] && trackMap[sound].length === steps) {
+              return trackMap[sound];
+            } else {
+              // Otherwise create an empty pattern for this instrument
+              return Array(steps).fill(false);
+            }
+          });
+          
+          setPattern(newPattern);
         } else {
-          // Handle case where time signature changed but pattern doesn't match
+          // Handle case where there are no tracks or the pattern doesn't match
           setPattern(createEmptyPattern(steps));
         }
       } else {
@@ -237,6 +312,51 @@ export default function Editor({ id, newTab }) {
       setCurrentStep(-1);
     }
   };
+
+  // Track visibility and context menu handlers
+  const toggleTrackVisibility = (trackIndex) => {
+    setHiddenTracks(prev => ({
+      ...prev,
+      [trackIndex]: !prev[trackIndex]
+    }));
+    
+    // Close context menu
+    setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
+  };
+  
+  const handleTrackIconClick = (e, trackIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    // Get the position for the context menu
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    setTrackContextMenu({
+      visible: true,
+      trackIndex,
+      x: rect.right,
+      y: rect.top
+    });
+  };
+  
+  const closeContextMenu = () => {
+    setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
+  };
+  
+  // Setup click outside listener to close context menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (trackContextMenu.visible && !e.target.closest('.track-context-menu') && !e.target.closest('.track-icon')) {
+        closeContextMenu();
+      }
+    };
+    
+    document.addEventListener('click', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [trackContextMenu.visible]);
 
   // Handlers
   //
@@ -362,10 +482,15 @@ export default function Editor({ id, newTab }) {
       intervalRef.current = setInterval(() => {
         setCurrentStep(step);
 
-        // Play sounds for current step using the playStep method
-        // This ensures any choke functionality works properly
+        // Play sounds for current step, skipping hidden tracks
         if (drumMachineRef.current) {
-          drumMachineRef.current.playStep(pattern, step, drumSounds);
+          // Filter out hidden tracks before playing
+          const visiblePattern = pattern.map((row, index) => 
+            hiddenTracks[index] ? Array(row.length).fill(false) : row
+          );
+          
+          // Use the filtered pattern for playback
+          drumMachineRef.current.playStep(visiblePattern, step, drumSounds);
         }
 
         step = (step + 1) % totalPatternSteps;
@@ -409,13 +534,18 @@ export default function Editor({ id, newTab }) {
         tsNumerator: timeSignature.numerator,
         tsDenominator: timeSignature.denominator,
         measures: bars,
+        // Store the current instrument order for future compatibility
+        instrumentOrder: [...drumSounds],
         tracks: pattern.map((patternRow, index) => {
+          const sound = drumSounds[index];
+          const trackId = `track-${sound}`;
+          
           // Handle special tracks like hihat
           if (specialTracks[index]) {
             return {
-              id: `track-${index + 1}`,
-              name: drumSounds[index],
-              sound: drumSounds[index],
+              id: trackId,
+              name: sound,
+              sound: sound,
               pattern: patternRow,
               // Add metadata for special track states
               states: specialTracks[index].states,
@@ -424,9 +554,9 @@ export default function Editor({ id, newTab }) {
           
           // Regular tracks
           return {
-            id: `track-${index + 1}`,
-            name: drumSounds[index],
-            sound: drumSounds[index],
+            id: trackId,
+            name: sound,
+            sound: sound,
             pattern: patternRow,
           };
         }),
@@ -686,11 +816,20 @@ export default function Editor({ id, newTab }) {
                     {/* Drum rows for this bar */}
                     <div className="drum-rows-container">
                       {pattern.map((row, rowIndex) => (
-                        <div key={rowIndex} className="drum-row">
-                          {/* Instrument name - show only in first bar or on smaller screens */}
+                        <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
+                          {/* Instrument name with icon - show only in first bar or on smaller screens */}
                           {barIndex === 0 ? (
                             <div className="drum-name">
-                              {drumSounds[rowIndex]}
+                              <div 
+                                className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
+                                onClick={(e) => handleTrackIconClick(e, rowIndex)}
+                              >
+                                {(() => {
+                                  const IconComponent = InstrumentIcons[drumSounds[rowIndex]] || InstrumentIcons.tom;
+                                  return <IconComponent />;
+                                })()}
+                                <div className="track-tooltip">{drumSounds[rowIndex]}</div>
+                              </div>
                             </div>
                           ) : null}
                           {/* Grid cells for this bar */}
@@ -730,6 +869,58 @@ export default function Editor({ id, newTab }) {
                   </div>
                 );
               })}
+          </div>
+        </div>
+      )}
+      
+      {/* Track Context Menu */}
+      {trackContextMenu.visible && (
+        <div 
+          className="track-context-menu" 
+          style={{ 
+            top: `${trackContextMenu.y}px`, 
+            left: `${trackContextMenu.x}px`,
+          }}
+        >
+          <div 
+            className="menu-item" 
+            onClick={() => toggleTrackVisibility(trackContextMenu.trackIndex)}
+          >
+            {hiddenTracks[trackContextMenu.trackIndex] ? <EyeIcon /> : <EyeOffIcon />}
+            {hiddenTracks[trackContextMenu.trackIndex] ? 'Show Track' : 'Hide Track'}
+          </div>
+          
+          <div 
+            className="menu-item" 
+            onClick={() => {
+              const newHiddenTracks = {};
+              drumSounds.forEach((_, index) => {
+                newHiddenTracks[index] = index !== trackContextMenu.trackIndex;
+              });
+              setHiddenTracks(newHiddenTracks);
+              closeContextMenu();
+            }}
+          >
+            <SoloIcon />
+            Solo This Track
+          </div>
+          
+          <div 
+            className="menu-item" 
+            onClick={() => {
+              setHiddenTracks({});
+              closeContextMenu();
+            }}
+          >
+            <GridIcon />
+            Show All Tracks
+          </div>
+          
+          {/* Additional context menu items can be added here */}
+          <div className="divider"></div>
+          <div className="menu-item" onClick={closeContextMenu}>
+            <CloseIcon />
+            Cancel
           </div>
         </div>
       )}

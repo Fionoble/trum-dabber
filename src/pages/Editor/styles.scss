@@ -106,6 +106,69 @@
   font-weight: 600;
   text-align: right;
   padding-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+
+  .track-icon {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    border-radius: 4px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+    position: relative;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #4f46e5;
+    }
+    
+    &:active {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    // Hidden track styling
+    &.hidden-track {
+      opacity: 0.5;
+      color: #999;
+      
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: currentColor;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+  
+  .track-tooltip {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 50;
+  }
+  
+  .track-icon:hover .track-tooltip {
+    opacity: 1;
+  }
 
   &.repeat-instrument {
     opacity: 0.6; // Fade out repeated instrument names
@@ -116,6 +179,60 @@
       opacity: 1;
       font-weight: 600;
     }
+  }
+}
+
+// Track context menu
+.track-context-menu {
+  position: fixed;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 150px;
+  z-index: 100;
+  
+  .menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+    
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  
+  .divider {
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 4px 0;
+  }
+}
+
+// Hidden track styling
+.drum-row.hidden-track {
+  opacity: 0.4;
+  height: 32px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+  
+  .drum-grid {
+    display: none;
+  }
+  
+  .drum-name {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 

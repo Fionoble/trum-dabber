@@ -1,9 +1,40 @@
 import { supabase } from "./supabase";
 import { user, isAuthenticated } from "./auth";
 
+// Key for storing instrument configuration in localStorage
+const INSTRUMENTS_KEY = "trum-dabber-instruments";
+const DEFAULT_INSTRUMENTS = ["hihat", "hiTom", "snare", "crash", "kick", "floorTom"];
+
 export class TabStorage {
   constructor() {
     this.tableName = "tabs";
+  }
+  
+  // Get user-configured instruments or return default ones
+  async getUserInstruments() {
+    try {
+      const settings = localStorage.getItem(INSTRUMENTS_KEY);
+      if (settings) {
+        return JSON.parse(settings);
+      }
+      // Return default instruments if none are saved
+      return DEFAULT_INSTRUMENTS;
+    } catch (error) {
+      console.error("Error getting instruments:", error);
+      // Return default instruments on error
+      return DEFAULT_INSTRUMENTS;
+    }
+  }
+
+  // Save user-configured instruments
+  async saveUserInstruments(instruments) {
+    try {
+      localStorage.setItem(INSTRUMENTS_KEY, JSON.stringify(instruments));
+      return true;
+    } catch (error) {
+      console.error("Error saving instruments:", error);
+      return false;
+    }
   }
 
   // Get all tabs for the current user
@@ -176,8 +207,8 @@ export class TabStorage {
   }
 
   // Create a new empty tab template
-  createEmptyTab(name = "New Beat") {
-    const drumSounds = ["kick", "snare", "hihat", "tom", "clap"];
+  async createEmptyTab(name = "New Beat") {
+    const drumSounds = await this.getUserInstruments();
     const steps = 16;
 
     return {
@@ -188,11 +219,17 @@ export class TabStorage {
         numerator: 4,
         denominator: 4,
       },
-      tracks: drumSounds.map((sound, index) => ({
-        id: `track-${index + 1}`,
+      // Store the instrument order for future compatibility
+      instrumentOrder: [...drumSounds],
+      tracks: drumSounds.map((sound) => ({
+        id: `track-${sound}`,
         name: sound,
         sound: sound,
         pattern: Array(steps).fill(false),
+        // Add special states for hihat
+        ...(sound === 'hihat' ? {
+          states: [false, "hihat", "hihatOpen"]
+        } : {})
       })),
       measures: 1,
       stepsPerMeasure: 16,

@@ -3,7 +3,10 @@ import snareSound from "../assets/sounds/snare.wav";
 import hihatSound from "../assets/sounds/hi-hat.wav";
 import hihatOpenSound from "../assets/sounds/hi-hat-open.wav";
 import tomSound from "../assets/sounds/tom.wav";
+import hiTomSound from "../assets/sounds/hi-tom.wav";
+import floorTomSound from "../assets/sounds/floor-tom.wav";
 import crashSound from "../assets/sounds/crash.wav";
+import cowbellSound from "../assets/sounds/cowbell.wav";
 
 export class DrumMachine {
   constructor() {
@@ -32,7 +35,10 @@ export class DrumMachine {
       hihat: hihatSound,
       hihatOpen: hihatOpenSound,
       tom: tomSound,
+      hiTom: hiTomSound,
+      floorTom: floorTomSound,
       crash: crashSound,
+      cowbell: cowbellSound,
     };
 
     try {
@@ -75,43 +81,109 @@ export class DrumMachine {
     const channelData = buffer.getChannelData(0);
 
     // Different frequency and decay for different drum types
-    let frequency, decay;
+    let frequency, decay, pitchDecay, noiseMix, method;
 
     switch (type) {
       case "kick":
         frequency = 60;
         decay = 0.15;
+        pitchDecay = 0.05;
+        noiseMix = 0.1;
+        method = "sine";
         break;
       case "snare":
         frequency = 200;
         decay = 0.1;
+        pitchDecay = 0.02;
+        noiseMix = 0.5;
+        method = "mix";
         break;
       case "hihat":
         frequency = 800;
         decay = 0.05;
+        pitchDecay = 0.01;
+        noiseMix = 0.8;
+        method = "noise";
         break;
       case "hihatOpen":
         frequency = 800;
         decay = 0.2; // Longer decay for open hi-hat
+        pitchDecay = 0.01;
+        noiseMix = 0.8;
+        method = "noise";
         break;
       case "tom":
         frequency = 100;
         decay = 0.1;
+        pitchDecay = 0.03;
+        noiseMix = 0.3;
+        method = "mix";
+        break;
+      case "hiTom":
+        frequency = 150;
+        decay = 0.08;
+        pitchDecay = 0.04;
+        noiseMix = 0.2;
+        method = "mix";
+        break;
+      case "floorTom":
+        frequency = 80;
+        decay = 0.12;
+        pitchDecay = 0.04;
+        noiseMix = 0.3;
+        method = "mix";
+        break;
+      case "cowbell":
+        frequency = 600;
+        decay = 0.2;
+        pitchDecay = 0.001;
+        noiseMix = 0.1;
+        method = "square";
         break;
       case "crash":
         frequency = 300;
         decay = 0.08;
+        pitchDecay = 0.01;
+        noiseMix = 0.7;
+        method = "noise";
         break;
       default:
         frequency = 200;
         decay = 0.1;
+        pitchDecay = 0.02;
+        noiseMix = 0.2;
+        method = "sine";
     }
 
-    // Simple sine wave with exponential decay
+    // Generate sound based on the method
     for (let i = 0; i < channelData.length; i++) {
       const t = i / sampleRate;
-      channelData[i] =
-        Math.sin(2 * Math.PI * frequency * t) * Math.exp(-t / decay);
+      
+      // Calculate amplitude envelope with exponential decay
+      const amplitude = Math.exp(-t / decay);
+      
+      // Calculate pitch envelope (frequency drops over time for toms and kicks)
+      const currentFreq = frequency * Math.exp(-t / pitchDecay);
+      
+      let sample = 0;
+      
+      if (method === "sine" || method === "mix") {
+        // Sine wave component
+        sample += Math.sin(2 * Math.PI * currentFreq * t) * (1 - noiseMix);
+      }
+      
+      if (method === "square" || method === "mix") {
+        // Square wave component
+        sample += Math.sign(Math.sin(2 * Math.PI * currentFreq * t)) * 0.5 * (1 - noiseMix);
+      }
+      
+      if (method === "noise" || method === "mix") {
+        // Noise component
+        sample += (Math.random() * 2 - 1) * noiseMix;
+      }
+      
+      // Apply amplitude envelope
+      channelData[i] = sample * amplitude;
     }
 
     return buffer;

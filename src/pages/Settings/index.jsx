@@ -1,8 +1,9 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import { signOut } from "../../services/auth";
 import { tabStorage } from "../../services/storage";
 import "./styles.scss";
 import { useLocation } from "preact-iso";
+import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
 
 export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -10,7 +11,35 @@ export default function Settings() {
   const [deleteStep, setDeleteStep] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [instruments, setInstruments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [newInstrument, setNewInstrument] = useState("");
   const { route } = useLocation();
+  
+  // Available instruments to choose from
+  const availableInstruments = [
+    "kick", "snare", "hihat", "hihatOpen", "tom", "hiTom", "floorTom", 
+    "crash", "cowbell"
+  ];
+  
+  useEffect(() => {
+    // Load saved instruments when the component mounts
+    const loadInstruments = async () => {
+      try {
+        setIsLoading(true);
+        const savedInstruments = await tabStorage.getUserInstruments();
+        setInstruments(savedInstruments);
+      } catch (error) {
+        console.error("Failed to load instruments:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadInstruments();
+  }, []);
 
   const openDeleteModal = () => {
     setShowDeleteModal(true);
@@ -58,10 +87,155 @@ export default function Settings() {
     }
   };
 
+  // New handler functions for instrument management
+  const handleSaveInstruments = async () => {
+    try {
+      setIsSaving(true);
+      await tabStorage.saveUserInstruments(instruments);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error) {
+      console.error("Failed to save instruments:", error);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  const handleAddInstrument = () => {
+    if (newInstrument && !instruments.includes(newInstrument)) {
+      setInstruments([...instruments, newInstrument]);
+      setNewInstrument("");
+    }
+  };
+  
+  const handleRemoveInstrument = (index) => {
+    const updatedInstruments = [...instruments];
+    updatedInstruments.splice(index, 1);
+    setInstruments(updatedInstruments);
+  };
+  
+  const handleMoveInstrument = (index, direction) => {
+    if (
+      (direction === "up" && index === 0) || 
+      (direction === "down" && index === instruments.length - 1)
+    ) {
+      return; // Can't move first item up or last item down
+    }
+    
+    const updatedInstruments = [...instruments];
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+    
+    // Swap positions
+    [updatedInstruments[index], updatedInstruments[newIndex]] = 
+    [updatedInstruments[newIndex], updatedInstruments[index]];
+    
+    setInstruments(updatedInstruments);
+  };
+
   return (
     <div className="settings-container p-4 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
-
+      
+      {/* Drum Machine Settings Section */}
+      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <MusicIcon className="h-5 w-5 mr-2 text-indigo-600" />
+          Drum Kit
+        </h2>
+        
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="spinner"></div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-4">
+              Customize your drum kit by adding, removing, or reordering instruments. 
+              Changes will apply to new beats you create.
+            </p>
+            
+            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">Current Instruments</h3>
+              
+              <ul className="mb-4">
+                {instruments.map((instrument, index) => (
+                  <li key={index} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <span className="font-mono text-sm">{instrument}</span>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => handleMoveInstrument(index, "up")}
+                        disabled={index === 0}
+                        className="text-gray-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-gray-500"
+                        title="Move up"
+                      >
+                        ↑
+                      </button>
+                      <button 
+                        onClick={() => handleMoveInstrument(index, "down")}
+                        disabled={index === instruments.length - 1}
+                        className="text-gray-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-gray-500"
+                        title="Move down"
+                      >
+                        ↓
+                      </button>
+                      <button 
+                        onClick={() => handleRemoveInstrument(index)}
+                        className="text-red-500 hover:text-red-700 ml-2"
+                        title="Remove"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+              
+              <div className="flex gap-2 mt-4">
+                <select 
+                  value={newInstrument} 
+                  onChange={(e) => setNewInstrument(e.target.value)}
+                  className="border border-gray-300 rounded-md p-2 text-sm flex-grow"
+                >
+                  <option value="">Select an instrument...</option>
+                  {availableInstruments
+                    .filter(inst => !instruments.includes(inst))
+                    .map(instrument => (
+                      <option key={instrument} value={instrument}>
+                        {instrument}
+                      </option>
+                    ))
+                  }
+                </select>
+                <button
+                  onClick={handleAddInstrument}
+                  disabled={!newInstrument || instruments.includes(newInstrument)}
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                {saveSuccess && (
+                  <span className="text-green-500 text-sm animate-fade-out">
+                    Settings saved successfully!
+                  </span>
+                )}
+              </div>
+              <button
+                onClick={handleSaveInstruments}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      
       {/* Account Management Section */}
       <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4 flex items-center">
