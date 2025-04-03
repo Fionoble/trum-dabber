@@ -4,6 +4,69 @@ import { tabStorage } from "../../services/storage";
 import "./styles.scss";
 import { useLocation } from "preact-iso";
 import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Sortable instrument component
+function SortableInstrumentItem({ instrument, index, onRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: instrument });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-0 ${
+        isDragging ? "bg-indigo-50 rounded" : ""
+      }`}
+    >
+      <div 
+        className="flex items-center cursor-move" 
+        {...attributes} 
+        {...listeners}
+      >
+        <svg viewBox="0 0 20 20" width="12" height="12" className="mr-2 text-gray-400">
+          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" fill="currentColor"></path>
+        </svg>
+        <span className="font-mono text-sm">{instrument}</span>
+      </div>
+      <button
+        onClick={() => onRemove(index)}
+        className="text-red-500 hover:text-red-700 ml-2"
+        title="Remove"
+      >
+        ×
+      </button>
+    </li>
+  );
+}
 
 export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -17,6 +80,18 @@ export default function Settings() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [newInstrument, setNewInstrument] = useState("");
   const { route } = useLocation();
+  
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Start dragging after moving 5px to avoid conflicts with click events
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Available instruments to choose from
   const availableInstruments = [
@@ -148,6 +223,20 @@ export default function Settings() {
 
     setInstruments(updatedInstruments);
   };
+  
+  // Handler for when drag ends - update the instruments array
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (active.id !== over.id) {
+      setInstruments((instruments) => {
+        const oldIndex = instruments.indexOf(active.id);
+        const newIndex = instruments.indexOf(over.id);
+        
+        return arrayMove(instruments, oldIndex, newIndex);
+      });
+    }
+  };
 
   return (
     <div className="settings-container p-4 max-w-4xl mx-auto">
@@ -175,42 +264,34 @@ export default function Settings() {
               <h3 className="text-sm font-medium text-gray-700 mb-2">
                 Current Instruments
               </h3>
-
-              <ul className="mb-4">
-                {instruments.map((instrument, index) => (
-                  <li
-                    key={index}
-                    className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0"
+              
+              <div className="mb-4 drag-container">
+                <p className="text-xs text-gray-500 mb-2 italic">
+                  Drag and drop to reorder instruments
+                </p>
+                
+                <DndContext 
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={instruments}
+                    strategy={verticalListSortingStrategy}
                   >
-                    <span className="font-mono text-sm">{instrument}</span>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleMoveInstrument(index, "up")}
-                        disabled={index === 0}
-                        className="text-gray-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-gray-500"
-                        title="Move up"
-                      >
-                        ↑
-                      </button>
-                      <button
-                        onClick={() => handleMoveInstrument(index, "down")}
-                        disabled={index === instruments.length - 1}
-                        className="text-gray-500 hover:text-indigo-600 disabled:opacity-30 disabled:hover:text-gray-500"
-                        title="Move down"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        onClick={() => handleRemoveInstrument(index)}
-                        className="text-red-500 hover:text-red-700 ml-2"
-                        title="Remove"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
+                    <ul className="mb-4">
+                      {instruments.map((instrument, index) => (
+                        <SortableInstrumentItem
+                          key={instrument}
+                          instrument={instrument}
+                          index={index}
+                          onRemove={handleRemoveInstrument}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              </div>
 
               <div className="flex gap-2 mt-4">
                 <select
