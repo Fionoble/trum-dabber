@@ -233,6 +233,7 @@ export default function Editor({ id, newTab }) {
         if (tab.measures) {
           setBars(tab.measures);
         }
+        
 
         const steps =
           (tab.tsNumerator || 4) * SUBDIVISION * (tab.measures || 1);
@@ -766,6 +767,7 @@ export default function Editor({ id, newTab }) {
                 </select>
               </div>
             </div>
+            
 
             <div className="text-xs text-gray-500 mt-1 col-span-full">
               Note: Changing time signature, bar count, or note resolution will
@@ -814,11 +816,12 @@ export default function Editor({ id, newTab }) {
                     </div>
 
                     {/* Drum rows for this bar */}
-                    <div className="bar-content-wrapper">
-                      <div className="drum-names-column">
-                        {pattern.map((_, rowIndex) => (
-                          <div key={rowIndex} className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
-                            {barIndex === 0 ? (
+                    <div className={`bar-content-wrapper ${barIndex === 0 ? 'first-bar' : 'secondary-bar'}`}>
+                      {/* Only show instrument names for the first bar */}
+                      {barIndex === 0 && (
+                        <div className="drum-names-column">
+                          {pattern.map((_, rowIndex) => (
+                            <div key={rowIndex} className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
                               <div className="drum-name">
                                 <div 
                                   className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
@@ -831,12 +834,12 @@ export default function Editor({ id, newTab }) {
                                   <div className="track-tooltip">{drumSounds[rowIndex]}</div>
                                 </div>
                               </div>
-                            ) : null}
-                          </div>
-                        ))}
-                      </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                      <div className="scrollable-grid-container">
+                      <div className={`scrollable-grid-container ${barIndex === 0 ? 'with-names' : 'full-width'}`}>
                         <div className="drum-rows-container">
                           {pattern.map((row, rowIndex) => (
                             <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
