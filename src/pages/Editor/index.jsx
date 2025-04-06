@@ -66,6 +66,8 @@ export default function Editor({ id, newTab }) {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [cellsPerRow, setCellsPerRow] = useState(0);
 
   // Time signature and bars
   const [timeSignature, setTimeSignature] = useState({
@@ -79,6 +81,31 @@ export default function Editor({ id, newTab }) {
     const num = Number(timeSignature.numerator) || 4;
     const barCount = Number(bars) || 1;
     return num * SUBDIVISION * barCount;
+  };
+  
+  // Calculate how many cells can fit in a row based on container width
+  const calculateCellsPerRow = (containerWidth) => {
+    // TESTING: Force a small number of cells per row to test splitting
+    // Remove this line in production and use the calculation below
+    return 8; // Force just 8 cells per row for testing
+    
+    /*
+    const CELL_WIDTH = window.innerWidth <= 768 ? 16 : 20; // Cell width + gap (smaller on mobile)
+    const FIRST_BAR_PADDING = window.innerWidth <= 768 ? 40 : 60; // Space for instrument names (smaller on mobile)
+    const BAR_PADDING = window.innerWidth <= 768 ? 20 : 30; // Section padding + borders
+    
+    // Determine available width (accounting for padding and other elements)
+    const availableWidth = containerWidth - BAR_PADDING;
+    
+    // Calculate how many cells can fit in the row
+    const cellsPerRow = Math.floor(availableWidth / CELL_WIDTH);
+    
+    // Minimum cells per row based on screen size
+    const minCells = window.innerWidth <= 480 ? 4 : 8;
+    
+    // Return at least minimum cells (reasonable display)
+    return Math.max(minCells, cellsPerRow);
+    */
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
@@ -101,6 +128,8 @@ export default function Editor({ id, newTab }) {
   const drumMachineRef = useRef(null);
   const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
+  const sequencerRef = useRef(null);
+  const resizeObserverRef = useRef(null);
 
   const { route } = useLocation();
 
@@ -188,6 +217,48 @@ export default function Editor({ id, newTab }) {
       resizePattern(newTotalSteps);
     }
   }, [timeSignature, bars]);
+  
+  // Set up resize observer to track container width and calculate cells per row
+  useEffect(() => {
+    // Set a default value for cells per row - this guarantees we have a value for initial rendering
+    setCellsPerRow(8); // Start with 8 cells per row by default
+    
+    // Wait for the component to fully mount
+    setTimeout(() => {
+      if (!sequencerRef.current) {
+        console.log("Sequencer ref not available yet");
+        return;
+      }
+      
+      const handleResize = (entries) => {
+        for (let entry of entries) {
+          const width = entry.contentRect.width;
+          console.log("Container width:", width);
+          setContainerWidth(width);
+          setCellsPerRow(calculateCellsPerRow(width));
+        }
+      };
+      
+      // Create resize observer
+      try {
+        resizeObserverRef.current = new ResizeObserver(handleResize);
+        resizeObserverRef.current.observe(sequencerRef.current);
+        
+        // Initial calculation
+        setContainerWidth(sequencerRef.current.offsetWidth);
+        setCellsPerRow(calculateCellsPerRow(sequencerRef.current.offsetWidth));
+        console.log("Initial width:", sequencerRef.current.offsetWidth);
+      } catch (err) {
+        console.error("Error setting up ResizeObserver:", err);
+      }
+    }, 500); // 500ms delay to ensure DOM is ready
+    
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+    };
+  }, [isLoaded]); // Re-run when isLoaded changes to ensure DOM elements exist
 
   const duplicateBar = (barIndex) => {
     // Stop playback if in progress to avoid issues
@@ -323,6 +394,97 @@ export default function Editor({ id, newTab }) {
     
     // Close context menu
     setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
+  };
+  
+  // Render a bar or bar segment
+  const renderBar = (barIndex, startStep, endStep, segmentIndex, stepsPerBar) => {
+    const isFirstSegment = segmentIndex === 0;
+    const key = `bar-${barIndex}-segment-${segmentIndex}`;
+    
+    return (
+      <div key={key} className={`bar-section segment-${segmentIndex} ${isFirstSegment ? '' : 'continuation'}`}>
+        {/* Only show the bar number on the first segment */}
+        {isFirstSegment && (
+          <div className="bar-number">{barIndex + 1}</div>
+        )}
+
+        {/* Only show bar actions on the first segment */}
+        {isFirstSegment && (
+          <div className="bar-actions">
+            <button
+              onClick={() => duplicateBar(barIndex)}
+              className="duplicate-bar-btn"
+              title="Duplicate this bar"
+              aria-label="Duplicate bar"
+            >
+              <DuplicateIcon />
+            </button>
+          </div>
+        )}
+
+        {/* Drum rows for this bar segment */}
+        <div className={`bar-content-wrapper ${barIndex === 0 && isFirstSegment ? 'first-bar' : 'secondary-bar'}`}>
+          {/* Only show instrument names for the first bar's first segment */}
+          {barIndex === 0 && isFirstSegment && (
+            <div className="drum-names-column">
+              {pattern.map((_, rowIndex) => (
+                <div key={rowIndex} className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
+                  <div className="drum-name">
+                    <div 
+                      className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
+                      onClick={(e) => handleTrackIconClick(e, rowIndex)}
+                    >
+                      {(() => {
+                        const IconComponent = InstrumentIcons[drumSounds[rowIndex]] || InstrumentIcons.tom;
+                        return <IconComponent />;
+                      })()}
+                      <div className="track-tooltip">{drumSounds[rowIndex]}</div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className={`scrollable-grid-container ${barIndex === 0 && isFirstSegment ? 'with-names' : 'full-width'}`}>
+            <div className="drum-rows-container">
+              {pattern.map((row, rowIndex) => (
+                <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
+                  {/* Grid cells for this bar segment */}
+                  <div className={`drum-grid resolution-${SUBDIVISION} ${isFirstSegment ? 'segment-start' : ''}`}>
+                    {row
+                      .slice(startStep, endStep)
+                      .map((cell, cellIndex) => {
+                        const globalColIndex = startStep + cellIndex;
+                        // Only show beat markers at actual beat positions
+                        const beatPosition = (globalColIndex - (barIndex * stepsPerBar)) % 4; 
+                        const isBeatStart = beatPosition === 0;
+
+                        return (
+                          <button
+                            key={cellIndex}
+                            className={`drum-cell
+                            ${cell ? "active" : ""}
+                            ${cell === "hihatOpen" ? "open-hihat" : ""}
+                            ${currentStep === globalColIndex ? "playing" : ""}
+                            ${isBeatStart ? "beat-start" : ""}
+                            ${cellIndex === 0 && isFirstSegment ? "bar-start" : ""}
+                          `}
+                            onClick={() =>
+                              handleCellClick(rowIndex, globalColIndex)
+                            }
+                            aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${(globalColIndex - (barIndex * stepsPerBar)) + 1}`}
+                          />
+                        );
+                      })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
   
   const handleTrackIconClick = (e, trackIndex) => {
@@ -788,7 +950,7 @@ export default function Editor({ id, newTab }) {
 
       {/* Drum grid with bar-based layout */}
       {isLoaded && (
-        <div className="sequencer">
+        <div className="sequencer" ref={sequencerRef}>
           {/* Bars container - vertical wrapping happens here */}
           <div className="bars-container">
             {Array(bars)
@@ -798,84 +960,68 @@ export default function Editor({ id, newTab }) {
                 const stepsPerBar = timeSignature.numerator * SUBDIVISION;
                 const startStep = barIndex * stepsPerBar;
                 const endStep = startStep + stepsPerBar;
-
-                return (
-                  <div key={barIndex} className="bar-section">
-                    {/* Bar number indicator */}
-                    <div className="bar-number">{barIndex + 1}</div>
-
-                    <div className="bar-actions">
-                      <button
-                        onClick={() => duplicateBar(barIndex)}
-                        className="duplicate-bar-btn"
-                        title="Duplicate this bar"
-                        aria-label="Duplicate bar"
-                      >
-                        <DuplicateIcon />
-                      </button>
-                    </div>
-
-                    {/* Drum rows for this bar */}
-                    <div className={`bar-content-wrapper ${barIndex === 0 ? 'first-bar' : 'secondary-bar'}`}>
-                      {/* Only show instrument names for the first bar */}
-                      {barIndex === 0 && (
-                        <div className="drum-names-column">
-                          {pattern.map((_, rowIndex) => (
-                            <div key={rowIndex} className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
-                              <div className="drum-name">
-                                <div 
-                                  className={`track-icon ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}
-                                  onClick={(e) => handleTrackIconClick(e, rowIndex)}
-                                >
-                                  {(() => {
-                                    const IconComponent = InstrumentIcons[drumSounds[rowIndex]] || InstrumentIcons.tom;
-                                    return <IconComponent />;
-                                  })()}
-                                  <div className="track-tooltip">{drumSounds[rowIndex]}</div>
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      <div className={`scrollable-grid-container ${barIndex === 0 ? 'with-names' : 'full-width'}`}>
-                        <div className="drum-rows-container">
-                          {pattern.map((row, rowIndex) => (
-                            <div key={rowIndex} className={`drum-row ${hiddenTracks[rowIndex] ? 'hidden-track' : ''}`}>
-                              {/* Grid cells for this bar */}
-                              <div className={`drum-grid resolution-${SUBDIVISION}`}>
-                                {row
-                                  .slice(startStep, endStep)
-                                  .map((cell, cellIndex) => {
-                                    const globalColIndex = startStep + cellIndex;
-                                    const isBeatStart = cellIndex % 4 === 0;
-
-                                    return (
-                                      <button
-                                        key={cellIndex}
-                                        className={`drum-cell
-                                        ${cell ? "active" : ""}
-                                        ${cell === "hihatOpen" ? "open-hihat" : ""}
-                                        ${currentStep === globalColIndex ? "playing" : ""}
-                                        ${isBeatStart ? "beat-start" : ""}
-                                        ${cellIndex === 0 ? "bar-start" : ""}
-                                      `}
-                                        onClick={() =>
-                                          handleCellClick(rowIndex, globalColIndex)
-                                        }
-                                        aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${cellIndex + 1}`}
-                                      />
-                                    );
-                                  })}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
+                
+                console.log(`Bar ${barIndex+1}: stepsPerBar=${stepsPerBar}, cellsPerRow=${cellsPerRow}`);
+                
+                // FORCE TESTING: For testing purposes, always split the bar if it has more than 8 steps
+                // Remove this for production and use the calculation below
+                if (stepsPerBar > 8) {
+                  // Force 8 cells per segment for testing
+                  const forcedSegments = Math.ceil(stepsPerBar / 8);
+                  console.log(`Forcing ${forcedSegments} segments for bar ${barIndex+1}`);
+                  
+                  return Array(forcedSegments)
+                    .fill(0)
+                    .map((_, segmentIndex) => {
+                      const segmentStart = startStep + (segmentIndex * 8);
+                      const segmentEnd = Math.min(startStep + ((segmentIndex + 1) * 8), endStep);
+                      
+                      console.log(`Bar ${barIndex+1} Segment ${segmentIndex}: ${segmentStart} - ${segmentEnd}`);
+                      
+                      return renderBar(
+                        barIndex, 
+                        segmentStart, 
+                        segmentEnd,
+                        segmentIndex,
+                        stepsPerBar
+                      );
+                    });
+                }
+                
+                // PRODUCTION LOGIC - uncomment this for normal operation
+                /*
+                // If cellsPerRow is too small or not calculated yet, render the entire bar
+                if (cellsPerRow < 8 || containerWidth === 0) {
+                  return renderBar(barIndex, startStep, endStep, 0, stepsPerBar);
+                }
+                
+                // Calculate how many segments we need for this bar
+                const segments = Math.ceil(stepsPerBar / cellsPerRow);
+                
+                // If only one segment is needed, render the entire bar
+                if (segments <= 1) {
+                  return renderBar(barIndex, startStep, endStep, 0, stepsPerBar);
+                }
+                
+                // Multiple segments needed - split the bar
+                return Array(segments)
+                  .fill(0)
+                  .map((_, segmentIndex) => {
+                    const segmentStart = startStep + (segmentIndex * cellsPerRow);
+                    const segmentEnd = Math.min(startStep + ((segmentIndex + 1) * cellsPerRow), endStep);
+                    
+                    return renderBar(
+                      barIndex, 
+                      segmentStart, 
+                      segmentEnd,
+                      segmentIndex,
+                      stepsPerBar
+                    );
+                  });
+                */
+                
+                // Fallback - render the entire bar 
+                return renderBar(barIndex, startStep, endStep, 0, stepsPerBar);
               })}
           </div>
         </div>
