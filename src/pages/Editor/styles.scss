@@ -12,7 +12,7 @@
 .bars-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  row-gap: 16px;
   width: 100%;
   justify-content: flex-start; // Align to the left
 }
@@ -28,14 +28,14 @@
   padding: 12px;
   position: relative;
   width: fit-content; // Only as wide as needed
-  
+
   // Special visual treatment for continuation segments
   &.continuation {
-    border-left: 4px solid #4f46e5; // Visual indicator that it's a continuation (thicker for visibility)
-    background-color: #f8f9ff; // Light background to distinguish it
-    margin-top: -10px; // Move up to connect with previous segment
+    border-left: 1px solid #4f46e5; // Visual indicator that it's a continuation (thicker for visibility)
+    /* background-color: #f8f9ff; // Light background to distinguish it */
+    /* margin-top: -10px; // Move up to connect with previous segment */
     box-shadow: 0 3px 8px rgba(79, 70, 229, 0.1); // More visible shadow
-    
+
     // Add connecting lines to link segments visually
     &::before {
       content: "";
@@ -46,9 +46,9 @@
       height: 2px; // Thicker line
       background-color: #ebe9fe; // Match the purple theme
     }
-    
+
     // Add a "continued" label for clarity during testing
-    &::after {
+    /* &::after {
       content: "continued";
       position: absolute;
       top: 2px;
@@ -56,16 +56,20 @@
       font-size: 10px;
       color: #6366f1;
       opacity: 0.7;
-    }
+    } */
   }
-  
+
   // Styling for different segment positions
   &.segment-0 {
     // First segment of a bar
     border-top: 1px solid #eaeaea;
+    border-left: 3px solid #4f46e5;
   }
-  
-  &.segment-1, &.segment-2, &.segment-3, &.segment-4 {
+
+  &.segment-1,
+  &.segment-2,
+  &.segment-3,
+  &.segment-4 {
     // Continuation segments
     border-top: 1px solid #e5e7eb;
   }
@@ -118,11 +122,11 @@
 .bar-content-wrapper {
   display: flex;
   width: 100%;
-  
+
   &.first-bar {
     // Styles specific to the first bar
   }
-  
+
   &.secondary-bar {
     // Styles specific to secondary bars
     // No left column, so can use more space
@@ -141,11 +145,11 @@
   margin-bottom: 6px;
   display: flex;
   align-items: center;
-  
+
   &:last-child {
     margin-bottom: 0; // Remove margin from the last row
   }
-  
+
   &.hidden-track {
     height: 30px;
     opacity: 0.4;
@@ -161,26 +165,26 @@
   scroll-behavior: smooth; // Smooth scrolling
   scrollbar-width: thin;
   scrollbar-color: #ccc transparent;
-  
+
   // With instrument names column (first bar)
   &.with-names {
     max-width: calc(100% - 60px); // Account for instrument column width
   }
-  
+
   // Full width (secondary bars)
   &.full-width {
     width: 100%;
   }
-  
+
   // Custom scrollbar for WebKit browsers
   &::-webkit-scrollbar {
     height: 4px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: transparent;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background-color: #ccc;
     border-radius: 2px;
@@ -201,7 +205,7 @@
   align-items: center;
   margin-bottom: 6px;
   height: 24px;
-  
+
   &:last-child {
     margin-bottom: 0; // Remove margin from the last row
   }
@@ -230,23 +234,25 @@
     justify-content: center;
     color: #555;
     border-radius: 4px;
-    transition: background-color 0.2s ease, color 0.2s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
     position: relative;
-    
+
     &:hover {
       background-color: rgba(0, 0, 0, 0.05);
       color: #4f46e5;
     }
-    
+
     &:active {
       background-color: rgba(0, 0, 0, 0.1);
     }
-    
+
     // Hidden track styling
     &.hidden-track {
       opacity: 0.5;
       color: #999;
-      
+
       &::after {
         content: "";
         position: absolute;
@@ -259,7 +265,7 @@
       }
     }
   }
-  
+
   .track-tooltip {
     position: absolute;
     top: -25px;
@@ -275,7 +281,7 @@
     white-space: nowrap;
     z-index: 50;
   }
-  
+
   .track-icon:hover .track-tooltip {
     opacity: 1;
   }
@@ -301,7 +307,7 @@
   padding: 4px 0;
   min-width: 150px;
   z-index: 100;
-  
+
   .menu-item {
     padding: 8px 12px;
     cursor: pointer;
@@ -310,17 +316,17 @@
     align-items: center;
     gap: 8px;
     font-size: 14px;
-    
+
     &:hover {
       background-color: rgba(0, 0, 0, 0.05);
     }
-    
+
     svg {
       width: 16px;
       height: 16px;
     }
   }
-  
+
   .divider {
     height: 1px;
     background-color: rgba(0, 0, 0, 0.1);
@@ -335,7 +341,7 @@
   overflow: hidden;
   margin-bottom: 4px;
   transition: all 0.3s ease;
-  
+
   .drum-grid {
     display: none;
   }
@@ -343,10 +349,10 @@
 
 // Grid for a single bar of an instrument
 .drum-grid {
-  display: flex; // Changed from grid to flex
-  gap: 2px; // Gap between cells
-  width: max-content; // Prevent wrapping by expanding as needed
-  
+  display: flex;
+  gap: 2px;
+  width: max-content;
+
   &.segment-start {
     // Highlight this as the start of a bar
     .drum-cell:first-child {
@@ -358,15 +364,15 @@
 
 // Individual cell styling
 .drum-cell {
-  width: 18px; // Fixed width
-  height: 18px; // Fixed height
-  flex: 0 0 auto; // Don't grow or shrink
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
   border: 1px solid #ccc;
   border-radius: 2px;
   background-color: #f5f5f5;
   transition: all 0.1s ease;
   position: relative;
-  padding: 0; // Remove padding
+  padding: 0;
 
   &:hover {
     background-color: #e5e5e5;
@@ -380,12 +386,12 @@
     background-color: #4caf50;
     border-color: #2e7d32;
   }
-  
+
   &.open-hihat {
     background-color: #8bc34a;
     border-color: #689f38;
     position: relative;
-    
+
     &::after {
       content: "O";
       position: absolute;
@@ -415,18 +421,7 @@
 
   // Beat start indicators
   &.beat-start {
-    border-left-color: #999;
-
-    /* &::before {
-      content: attr(data-beat);
-      position: absolute;
-      top: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 10px;
-      color: #777;
-      pointer-events: none;
-    } */
+    /* border-left-color: #999; */
   }
 }
 
@@ -556,12 +551,12 @@ input[type="range"]::-moz-range-thumb:hover {
     width: 100%; // Full width on mobile
     max-width: 100%;
     padding: 8px;
-    
+
     &.continuation {
       margin-top: -10px; // Smaller margin on mobile
     }
   }
-  
+
   .bars-container {
     gap: 12px;
   }
@@ -574,14 +569,15 @@ input[type="range"]::-moz-range-thumb:hover {
   .drum-name {
     font-size: 0.85rem;
   }
-  
+
   .scrollable-grid-container {
     &.with-names {
       max-width: calc(100% - 36px); // Account for smaller instrument column
     }
   }
-  
-  .drum-name-wrapper, .drum-row {
+
+  .drum-name-wrapper,
+  .drum-row {
     height: 22px;
     margin-bottom: 4px;
   }
@@ -599,11 +595,11 @@ input[type="range"]::-moz-range-thumb:hover {
     font-size: 10px;
     padding: 1px 6px;
   }
-  
+
   .bar-content-wrapper {
     overflow: hidden; // Prevent horizontal overflow on mobile
   }
-  
+
   // Scale down the open hi-hat indicator on mobile
   .drum-cell.open-hihat::after {
     font-size: 8px;
