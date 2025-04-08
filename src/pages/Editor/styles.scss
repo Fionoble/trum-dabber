@@ -31,47 +31,12 @@
 
   // Special visual treatment for continuation segments
   &.continuation {
-    border-left: 1px solid #4f46e5; // Visual indicator that it's a continuation (thicker for visibility)
-    /* background-color: #f8f9ff; // Light background to distinguish it */
-    /* margin-top: -10px; // Move up to connect with previous segment */
-    box-shadow: 0 3px 8px rgba(79, 70, 229, 0.1); // More visible shadow
-
-    // Add connecting lines to link segments visually
-    &::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 2px; // Thicker line
-      background-color: #ebe9fe; // Match the purple theme
-    }
-
-    // Add a "continued" label for clarity during testing
-    /* &::after {
-      content: "continued";
-      position: absolute;
-      top: 2px;
-      right: 5px;
-      font-size: 10px;
-      color: #6366f1;
-      opacity: 0.7;
-    } */
+    border-left: 1px solid #4f46e5;
   }
 
   // Styling for different segment positions
   &.segment-0 {
-    // First segment of a bar
-    border-top: 1px solid #eaeaea;
     border-left: 3px solid #4f46e5;
-  }
-
-  &.segment-1,
-  &.segment-2,
-  &.segment-3,
-  &.segment-4 {
-    // Continuation segments
-    border-top: 1px solid #e5e7eb;
   }
 }
 
@@ -352,14 +317,6 @@
   display: flex;
   gap: 2px;
   width: max-content;
-
-  &.segment-start {
-    // Highlight this as the start of a bar
-    .drum-cell:first-child {
-      border-left-color: #666;
-      border-left-width: 2px;
-    }
-  }
 }
 
 // Individual cell styling
@@ -412,16 +369,6 @@
     background-color: #66bb6a;
     box-shadow: 0 0 0 2px rgba(66, 135, 245, 0.6);
     transform: scale(1.05);
-  }
-
-  // Bar start indicators
-  &.bar-start {
-    border-left: 2px solid #666;
-  }
-
-  // Beat start indicators
-  &.beat-start {
-    /* border-left-color: #999; */
   }
 }
 
@@ -629,36 +576,6 @@ input[type="range"]::-moz-range-thumb:hover {
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-}
-
-.eighth-marker {
-  font-weight: 500;
-  color: #999;
-  &::before {
-    content: "";
-    position: absolute;
-    height: 8px;
-    width: 1px;
-    background-color: #999;
-    bottom: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-
-.sixteenth-marker {
-  font-weight: normal;
-  color: #bbb;
-  &::before {
-    content: "";
-    position: absolute;
-    height: 4px;
-    width: 1px;
-    background-color: #bbb;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
   }
 }
 
