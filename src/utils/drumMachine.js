@@ -10,8 +10,18 @@ import cowbellSound from "../assets/sounds/cowbell.wav";
 
 export class DrumMachine {
   constructor() {
-    this.audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    // Resume any suspended audio context or create a new one
+    if (window.sharedAudioContext) {
+      this.audioContext = window.sharedAudioContext;
+      if (this.audioContext.state === "suspended") {
+        this.audioContext.resume();
+      }
+    } else {
+      this.audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      window.sharedAudioContext = this.audioContext;
+    }
+    
     this.samples = {};
     this.isLoaded = false;
     this.masterGain = this.audioContext.createGain();
@@ -26,6 +36,9 @@ export class DrumMachine {
       "hihat": "hihat-group",
       "hihatOpen": "hihat-group"
     };
+    
+    // Add a console message to debug instance creation
+    console.log('DrumMachine instance created');
   }
 
   async loadSamples() {
@@ -189,7 +202,7 @@ export class DrumMachine {
     return buffer;
   }
 
-  playSound(sampleName, time = 0) {
+  async playSound(sampleName, time = 0) {
     if (!this.samples[sampleName]) {
       console.warn(`Sample ${sampleName} not found`);
       return;
@@ -197,8 +210,11 @@ export class DrumMachine {
 
     // Resume audio context if it's suspended (needed due to autoplay policies)
     if (this.audioContext.state === "suspended") {
-      this.audioContext.resume();
+      console.log('Resuming suspended audio context');
+      await this.audioContext.resume();
     }
+    
+    console.log(`Playing sound: ${sampleName}`);
 
     // Check if this sound is part of an instrument group (like hi-hats)
     const group = this.instrumentGroups[sampleName];
@@ -271,9 +287,16 @@ export class DrumMachine {
   }
 
   // Play all sounds for the current step
-  playStep(pattern, step, sounds) {
-    // Sort the indices to ensure hi-hat closed plays after hi-hat open
-    // This ensures that if both are on the same step, the closed hi-hat chokes the open
+  async playStep(pattern, step, sounds) {
+    // Resume the audio context if it's suspended
+    if (this.audioContext.state === "suspended") {
+      console.log('Resuming audio context before playing step');
+      try {
+        await this.audioContext.resume();
+      } catch (err) {
+        console.error('Error resuming audio context:', err);
+      }
+    }
     
     // First, get all the active sounds for this step
     const activeSounds = [];
@@ -299,9 +322,13 @@ export class DrumMachine {
     });
     
     // Play the sounds in the sorted order
-    activeSounds.forEach(({ soundToPlay }) => {
-      this.playSound(soundToPlay);
-    });
+    for (const { soundToPlay } of activeSounds) {
+      try {
+        await this.playSound(soundToPlay);
+      } catch (err) {
+        console.error(`Error playing sound ${soundToPlay}:`, err);
+      }
+    }
   }
 
   stop() {

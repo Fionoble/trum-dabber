@@ -122,12 +122,44 @@ export default function Editor({ id, newTab }) {
   const sequencerRef = useRef(null);
   const resizeObserverRef = useRef(null);
 
-  const { route } = useLocation();
+  const location = useLocation();
+  const { route } = location;
+
+  // Listen for route changes through preact-iso
+  // We'll listen to location URL changes
+  useEffect(() => {
+    console.log('Editor detected location.url change:', location.url);
+    
+    // When location changes and we're currently playing, stop the playback
+    if (isPlaying && drumMachineRef.current) {
+      console.log('Stopping playback due to URL change');
+      clearInterval(intervalRef.current);
+      drumMachineRef.current.stop();
+      setIsPlaying(false);
+      setCurrentStep(-1);
+    }
+    
+    // When unmounting component due to navigation
+    return () => {
+      // When route is about to change, stop the drum machine
+      if (drumMachineRef.current) {
+        console.log('Editor component unmounting - stopping drum machine');
+        drumMachineRef.current.stop();
+      }
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        setIsPlaying(false);
+        setCurrentStep(-1);
+      }
+    };
+  }, [location.url]);
 
   // Initialize drum machine and load tab if exists
   useEffect(async () => {
     const initDrumMachine = async () => {
       drumMachineRef.current = new DrumMachine();
+      // Make drum machine globally accessible for route change detection
+      window.globalDrumMachine = drumMachineRef.current;
       await drumMachineRef.current.loadSamples();
       setIsLoaded(true);
     };
@@ -191,6 +223,8 @@ export default function Editor({ id, newTab }) {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (drumMachineRef.current) {
         drumMachineRef.current.stop();
+        // Remove global reference when component unmounts
+        window.globalDrumMachine = null;
       }
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
