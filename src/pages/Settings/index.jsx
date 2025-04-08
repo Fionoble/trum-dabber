@@ -1,8 +1,72 @@
-import { useState } from "preact/hooks";
+import { useState, useEffect } from "preact/hooks";
 import { signOut } from "../../services/auth";
 import { tabStorage } from "../../services/storage";
 import "./styles.scss";
 import { useLocation } from "preact-iso";
+import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+
+// Sortable instrument component
+function SortableInstrumentItem({ instrument, index, onRemove }) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: instrument });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 1 : 0,
+  };
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-0 ${
+        isDragging ? "bg-indigo-50 rounded" : ""
+      }`}
+    >
+      <div 
+        className="flex items-center cursor-move" 
+        {...attributes} 
+        {...listeners}
+      >
+        <svg viewBox="0 0 20 20" width="12" height="12" className="mr-2 text-gray-400">
+          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" fill="currentColor"></path>
+        </svg>
+        <span className="font-mono text-sm">{instrument}</span>
+      </div>
+      <button
+        onClick={() => onRemove(index)}
+        className="text-red-500 hover:text-red-700 ml-2"
+        title="Remove"
+      >
+        ×
+      </button>
+    </li>
+  );
+}
 
 export default function Settings() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -10,7 +74,54 @@ export default function Settings() {
   const [deleteStep, setDeleteStep] = useState(1);
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
+  const [instruments, setInstruments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [newInstrument, setNewInstrument] = useState("");
   const { route } = useLocation();
+  
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // Start dragging after moving 5px to avoid conflicts with click events
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Available instruments to choose from
+  const availableInstruments = [
+    "kick",
+    "snare",
+    "hihat",
+    "hihatOpen",
+    "tom",
+    "hiTom",
+    "floorTom",
+    "crash",
+    "cowbell",
+  ];
+
+  useEffect(() => {
+    // Load saved instruments when the component mounts
+    const loadInstruments = async () => {
+      try {
+        setIsLoading(true);
+        const savedInstruments = await tabStorage.getUserInstruments();
+        setInstruments(savedInstruments);
+      } catch (error) {
+        console.error("Failed to load instruments:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInstruments();
+  }, []);
 
   const openDeleteModal = () => {
     setShowDeleteModal(true);
@@ -58,9 +169,177 @@ export default function Settings() {
     }
   };
 
+  // New handler functions for instrument management
+  const handleSaveInstruments = async () => {
+    try {
+      setIsSaving(true);
+      setError(null); // Clear any previous errors
+
+      const success = await tabStorage.saveUserInstruments(instruments);
+
+      if (success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setError("Failed to save instrument settings. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to save instruments:", error);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddInstrument = () => {
+    if (newInstrument && !instruments.includes(newInstrument)) {
+      setInstruments([...instruments, newInstrument]);
+      setNewInstrument("");
+    }
+  };
+
+  const handleRemoveInstrument = (index) => {
+    const updatedInstruments = [...instruments];
+    updatedInstruments.splice(index, 1);
+    setInstruments(updatedInstruments);
+  };
+
+  const handleMoveInstrument = (index, direction) => {
+    if (
+      (direction === "up" && index === 0) ||
+      (direction === "down" && index === instruments.length - 1)
+    ) {
+      return; // Can't move first item up or last item down
+    }
+
+    const updatedInstruments = [...instruments];
+    const newIndex = direction === "up" ? index - 1 : index + 1;
+
+    // Swap positions
+    [updatedInstruments[index], updatedInstruments[newIndex]] = [
+      updatedInstruments[newIndex],
+      updatedInstruments[index],
+    ];
+
+    setInstruments(updatedInstruments);
+  };
+  
+  // Handler for when drag ends - update the instruments array
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
+    
+    if (active.id !== over.id) {
+      setInstruments((instruments) => {
+        const oldIndex = instruments.indexOf(active.id);
+        const newIndex = instruments.indexOf(over.id);
+        
+        return arrayMove(instruments, oldIndex, newIndex);
+      });
+    }
+  };
+
   return (
     <div className="settings-container p-4 max-w-4xl mx-auto">
       <h1 className="text-3xl font-bold mb-6">Settings</h1>
+
+      {/* Drum Machine Settings Section */}
+      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <MusicIcon className="h-5 w-5 mr-2 text-indigo-600" />
+          Drum Kit
+        </h2>
+
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="spinner"></div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-4">
+              Customize your drum kit by adding, removing, or reordering
+              instruments. Changes will apply to new beats you create.
+            </p>
+
+            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Current Instruments
+              </h3>
+              
+              <div className="mb-4 drag-container">
+                <p className="text-xs text-gray-500 mb-2 italic">
+                  Drag and drop to reorder instruments
+                </p>
+                
+                <DndContext 
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext
+                    items={instruments}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <ul className="mb-4">
+                      {instruments.map((instrument, index) => (
+                        <SortableInstrumentItem
+                          key={instrument}
+                          instrument={instrument}
+                          index={index}
+                          onRemove={handleRemoveInstrument}
+                        />
+                      ))}
+                    </ul>
+                  </SortableContext>
+                </DndContext>
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <select
+                  value={newInstrument}
+                  onChange={(e) => setNewInstrument(e.target.value)}
+                  className="border border-gray-300 rounded-md p-2 text-sm flex-grow"
+                >
+                  <option value="">Select an instrument...</option>
+                  {availableInstruments
+                    .filter((inst) => !instruments.includes(inst))
+                    .map((instrument) => (
+                      <option key={instrument} value={instrument}>
+                        {instrument}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  onClick={handleAddInstrument}
+                  disabled={
+                    !newInstrument || instruments.includes(newInstrument)
+                  }
+                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                {saveSuccess && (
+                  <span className="text-green-500 text-sm animate-fade-out">
+                    Settings saved successfully!
+                  </span>
+                )}
+                {error && <span className="text-red-500 text-sm">{error}</span>}
+              </div>
+              <button
+                onClick={handleSaveInstruments}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Account Management Section */}
       <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">

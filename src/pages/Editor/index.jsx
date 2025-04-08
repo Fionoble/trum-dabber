@@ -12,12 +12,64 @@ import PlusIcon from "../../assets/icons/Plus.svg.jsx";
 import MinusIcon from "../../assets/icons/Minus.svg.jsx";
 import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
 import DuplicateIcon from "../../assets/icons/Duplicate.svg.jsx";
+import TrashIconFilled from "../../assets/icons/TrashIconFilled.svg.jsx";
+import ChevronDown2Icon from "../../assets/icons/ChevronDown2.svg.jsx";
+import EyeIcon from "../../assets/icons/Eye.svg.jsx";
+import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
+import SoloIcon from "../../assets/icons/Solo.svg.jsx";
+import GridIcon from "../../assets/icons/Grid.svg.jsx";
+import CloseIcon from "../../assets/icons/Close.svg.jsx";
+import InstrumentIcons from "../../assets/icons/instruments";
 
 const MAX_BAR_COUNT = 25;
+const SUBDIVISION = 8;
+const CELLS_PER_ROW = 8; // Default number of cells per row
 
 export default function Editor({ id, newTab }) {
-  // Define drum sounds and pattern
-  const drumSounds = ["hihat", "tom", "snare", "crash", "kick"];
+  const defaultDrumSounds = [
+    "hihat",
+    "hiTom",
+    "snare",
+    "crash",
+    "kick",
+    "floorTom",
+  ]; // These should come from the drum machine
+  const [drumSounds, setDrumSounds] = useState(defaultDrumSounds);
+
+  // Instrument visibility state
+  const [hiddenTracks, setHiddenTracks] = useState({});
+  const [trackContextMenu, setTrackContextMenu] = useState({
+    visible: false,
+    trackIndex: null,
+    x: 0,
+    y: 0,
+  });
+
+  // Define special tracks that can have multiple states
+  // This is dynamically calculated based on the current instrument order
+  const [specialTracks, setSpecialTracks] = useState({});
+
+  // Update special tracks when instrument order changes
+  useEffect(() => {
+    // Find the index of the hihat in the current instrument order
+    const hihatIndex = drumSounds.indexOf("hihat");
+
+    if (hihatIndex !== -1) {
+      setSpecialTracks({
+        [hihatIndex]: {
+          // hihat track index - dynamically determined
+          states: [false, "hihat", "hihatOpen"],
+          nextState: {
+            false: "hihat",
+            hihat: "hihatOpen",
+            hihatOpen: false,
+          },
+        },
+      });
+    } else {
+      setSpecialTracks({});
+    }
+  }, [drumSounds]);
 
   // States
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,7 +81,9 @@ export default function Editor({ id, newTab }) {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
-  const [subdivision, setSubdivision] = useState(4); // Default: 16th notes (4 subdivisions per beat)
+  const [containerWidth, setContainerWidth] = useState(0);
+  const [cellsPerRow, setCellsPerRow] = useState(0);
+  const [expandedBarMenu, setExpandedBarMenu] = useState(null);
 
   // Time signature and bars
   const [timeSignature, setTimeSignature] = useState({
@@ -41,9 +95,8 @@ export default function Editor({ id, newTab }) {
 
   const calculateTotalSteps = () => {
     const num = Number(timeSignature.numerator) || 4;
-    const sub = Number(subdivision) || 4;
     const barCount = Number(bars) || 1;
-    return num * sub * barCount;
+    return num * SUBDIVISION * barCount;
   };
 
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
@@ -51,7 +104,13 @@ export default function Editor({ id, newTab }) {
   const createEmptyPattern = (steps) => {
     // Make sure steps is a positive integer
     const validSteps = Math.max(1, Math.floor(Number(steps) || 1));
-    return drumSounds.map(() => Array(validSteps).fill(false));
+    return drumSounds.map((sound, index) => {
+      // For special tracks with multiple states, we need to store string values
+      if (specialTracks[index]) {
+        return Array(validSteps).fill(false);
+      }
+      return Array(validSteps).fill(false);
+    });
   };
 
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
@@ -60,6 +119,8 @@ export default function Editor({ id, newTab }) {
   const drumMachineRef = useRef(null);
   const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
+  const sequencerRef = useRef(null);
+  const resizeObserverRef = useRef(null);
 
   const { route } = useLocation();
 
@@ -71,7 +132,20 @@ export default function Editor({ id, newTab }) {
       setIsLoaded(true);
     };
 
+    // Load user's configured instruments
+    const loadInstruments = async () => {
+      try {
+        const savedInstruments = await tabStorage.getUserInstruments();
+        setDrumSounds(savedInstruments);
+      } catch (error) {
+        console.error("Error loading instruments:", error);
+        // Use default instruments if there's an error
+        setDrumSounds(defaultDrumSounds);
+      }
+    };
+
     initDrumMachine();
+    loadInstruments();
 
     if (newTab) {
       // Handle new tab creation with defaults
@@ -80,7 +154,6 @@ export default function Editor({ id, newTab }) {
       setBpm(120);
       setTimeSignature({ numerator: 4, denominator: 4 });
       setBars(1);
-      setSubdivision(4);
       setTotalSteps(calculateTotalSteps());
       setPattern(createEmptyPattern(calculateTotalSteps()));
     } else if (id) {
@@ -124,7 +197,7 @@ export default function Editor({ id, newTab }) {
     };
   }, [isLoading.value, isAuthenticated.value]);
 
-  // Update total steps when time signature, bars, or subdivision change
+  // Update total steps when time signature or bar change
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
 
@@ -134,14 +207,56 @@ export default function Editor({ id, newTab }) {
       // Resize the pattern to match the new step count
       resizePattern(newTotalSteps);
     }
-  }, [timeSignature, bars, subdivision]);
+  }, [timeSignature, bars]);
+
+  // Set up resize observer to track container width and calculate cells per row
+  useEffect(() => {
+    // Set a default value for cells per row - this guarantees we have a value for initial rendering
+    setCellsPerRow(8); // Start with 8 cells per row by default
+
+    // Wait for the component to fully mount
+    setTimeout(() => {
+      if (!sequencerRef.current) {
+        console.log("Sequencer ref not available yet");
+        return;
+      }
+
+      const handleResize = (entries) => {
+        for (let entry of entries) {
+          const width = entry.contentRect.width;
+          console.log("Container width:", width);
+          setContainerWidth(width);
+          setCellsPerRow(CELLS_PER_ROW);
+        }
+      };
+
+      // Create resize observer
+      try {
+        resizeObserverRef.current = new ResizeObserver(handleResize);
+        resizeObserverRef.current.observe(sequencerRef.current);
+
+        // Initial calculation
+        setContainerWidth(sequencerRef.current.offsetWidth);
+        setCellsPerRow(CELLS_PER_ROW);
+        console.log("Initial width:", sequencerRef.current.offsetWidth);
+      } catch (err) {
+        console.error("Error setting up ResizeObserver:", err);
+      }
+    }, 500); // 500ms delay to ensure DOM is ready
+
+    return () => {
+      if (resizeObserverRef.current) {
+        resizeObserverRef.current.disconnect();
+      }
+    };
+  }, [isLoaded]); // Re-run when isLoaded changes to ensure DOM elements exist
 
   const duplicateBar = (barIndex) => {
     // Stop playback if in progress to avoid issues
     if (isPlaying) togglePlayback();
 
     // Calculate steps per bar
-    const stepsPerBar = timeSignature.numerator * subdivision;
+    const stepsPerBar = timeSignature.numerator * SUBDIVISION;
 
     // Create a new pattern with the duplicated bar
     const newPattern = pattern.map((row) => {
@@ -167,6 +282,7 @@ export default function Editor({ id, newTab }) {
   const loadTab = async (tabId) => {
     try {
       const tab = await tabStorage.getTab(tabId);
+      console.log(tab);
       if (tab) {
         setTabId(tab.id);
         setTabName(tab.name);
@@ -181,14 +297,54 @@ export default function Editor({ id, newTab }) {
         }
 
         const steps =
-          (tab.tsNumerator || 4) * (tab.subdivision || 4) * (tab.measures || 1);
+          (tab.tsNumerator || 4) * SUBDIVISION * (tab.measures || 1);
         setTotalSteps(steps);
 
-        // Load pattern
-        if (tab.tracks && tab.tracks[0]?.pattern?.length === steps) {
-          setPattern(tab.tracks.map((track) => track.pattern));
+        if (tab.tracks && tab.tracks.length > 0) {
+          const trackMap = {};
+          tab.tracks.forEach((track) => {
+            if (track.sound && track.pattern) {
+              trackMap[track.sound] = track.pattern;
+            }
+          });
+
+          // Check if the tab has stored instrument order
+          let currentSounds;
+          if (
+            tab.instrumentOrder &&
+            Array.isArray(tab.instrumentOrder) &&
+            tab.instrumentOrder.length > 0
+          ) {
+            // Use the stored order, but add any missing instruments that might have been added since
+            const userInstruments = await tabStorage.getUserInstruments();
+            currentSounds = [...tab.instrumentOrder];
+
+            // Add any new instruments that weren't in the original tab
+            userInstruments.forEach((sound) => {
+              if (!currentSounds.includes(sound)) {
+                currentSounds.push(sound);
+              }
+            });
+          } else {
+            // Fall back to user's current instrument configuration
+            currentSounds = await tabStorage.getUserInstruments();
+          }
+          setDrumSounds(currentSounds);
+
+          // Create a pattern that matches the current instrument order
+          const newPattern = currentSounds.map((sound) => {
+            // If we have this sound in the saved tab, use its pattern
+            if (trackMap[sound] && trackMap[sound].length === steps) {
+              return trackMap[sound];
+            } else {
+              // Otherwise create an empty pattern for this instrument
+              return Array(steps).fill(false);
+            }
+          });
+
+          setPattern(newPattern);
         } else {
-          // Handle case where time signature changed but pattern doesn't match
+          // Handle case where there are no tracks or the pattern doesn't match
           setPattern(createEmptyPattern(steps));
         }
       } else {
@@ -221,76 +377,197 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  const handleSubdivisionChange = (newSubdivision) => {
-    // Store current pattern to preserve existing beats
-    const currentPattern = [...pattern];
+  // Track visibility and context menu handlers
+  const toggleTrackVisibility = (trackIndex) => {
+    setHiddenTracks((prev) => ({
+      ...prev,
+      [trackIndex]: !prev[trackIndex],
+    }));
 
-    // Calculate new total steps based on new subdivision
-    const beatsPerBar = timeSignature.numerator;
-    const oldSubdivisionsPerBeat = subdivision;
-    const newSubdivisionsPerBeat = newSubdivision;
-
-    const oldTotalSteps = beatsPerBar * oldSubdivisionsPerBeat * bars;
-    const newTotalSteps = beatsPerBar * newSubdivisionsPerBeat * bars;
-
-    // Create new pattern with adjusted size
-    const newPattern = drumSounds.map((_, rowIndex) => {
-      const newRow = Array(newTotalSteps).fill(false);
-
-      // Map old beats to new positions
-      if (newSubdivisionsPerBeat > oldSubdivisionsPerBeat) {
-        // Expanding: spread existing beats out
-        const ratio = newSubdivisionsPerBeat / oldSubdivisionsPerBeat;
-
-        for (let i = 0; i < oldTotalSteps; i++) {
-          if (currentPattern[rowIndex][i]) {
-            newRow[Math.floor(i * ratio)] = true;
-          }
-        }
-      } else {
-        // Contracting: combine beats (with potential data loss)
-        const ratio = oldSubdivisionsPerBeat / newSubdivisionsPerBeat;
-
-        for (let i = 0; i < oldTotalSteps; i++) {
-          if (currentPattern[rowIndex][i]) {
-            const newIndex = Math.floor(i / ratio);
-            if (newIndex < newTotalSteps) {
-              newRow[newIndex] = true;
-            }
-          }
-        }
-      }
-
-      return newRow;
-    });
-
-    // Update state
-    setSubdivision(newSubdivision);
-    setTotalSteps(newTotalSteps);
-    setPattern(newPattern);
-
-    // If playing, restart to avoid issues
-    if (isPlaying) {
-      togglePlayback();
-      setCurrentStep(-1);
-    }
-
-    // Save if tab exists
-    if (tabId) {
-      saveTab(false);
-    }
+    // Close context menu
+    setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
   };
+
+  // Render a bar or bar segment
+  const renderBar = (
+    barIndex,
+    startStep,
+    endStep,
+    segmentIndex,
+    stepsPerBar,
+  ) => {
+    const isFirstSegment = segmentIndex === 0;
+    const key = `bar-${barIndex}-segment-${segmentIndex}`;
+
+    return (
+      <div
+        key={key}
+        className={`bar-section segment-${segmentIndex} ${isFirstSegment ? "" : "continuation"}`}
+      >
+        {/* Only show the bar number on the first segment */}
+        {isFirstSegment && <div className="bar-number">{barIndex + 1}</div>}
+
+        {/* Only show bar actions on the first segment */}
+        {isFirstSegment && (
+          <div className="bar-actions">
+            <button
+              onClick={() => duplicateBar(barIndex)}
+              className="duplicate-bar-btn"
+              title="Duplicate this bar"
+              aria-label="Duplicate bar"
+            >
+              <DuplicateIcon />
+            </button>
+          </div>
+        )}
+
+        {/* Drum rows for this bar segment */}
+        <div
+          className={`bar-content-wrapper ${barIndex === 0 && isFirstSegment ? "first-bar" : "secondary-bar"}`}
+        >
+          {/* Only show instrument names for the first bar's first segment */}
+          {barIndex === 0 && isFirstSegment && (
+            <div className="drum-names-column">
+              {pattern.map((_, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                >
+                  <div className="drum-name">
+                    <div
+                      className={`track-icon ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                      onClick={(e) => handleTrackIconClick(e, rowIndex)}
+                    >
+                      {(() => {
+                        const IconComponent =
+                          InstrumentIcons[drumSounds[rowIndex]] ||
+                          InstrumentIcons.tom;
+                        return <IconComponent />;
+                      })()}
+                      <div className="track-tooltip">
+                        {drumSounds[rowIndex]}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div
+            className={`scrollable-grid-container ${barIndex === 0 && isFirstSegment ? "with-names" : "full-width"}`}
+          >
+            <div className="drum-rows-container">
+              {pattern.map((row, rowIndex) => (
+                <div
+                  key={rowIndex}
+                  className={`drum-row ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                >
+                  {/* Grid cells for this bar segment */}
+                  <div
+                    className={`drum-grid resolution-${SUBDIVISION} ${isFirstSegment ? "segment-start" : ""}`}
+                  >
+                    {row.slice(startStep, endStep).map((cell, cellIndex) => {
+                      const globalColIndex = startStep + cellIndex;
+                      // Only show beat markers at actual beat positions
+                      const beatPosition =
+                        (globalColIndex - barIndex * stepsPerBar) % 4;
+                      const isBeatStart = beatPosition === 0;
+
+                      return (
+                        <button
+                          key={cellIndex}
+                          className={`drum-cell
+                            ${cell ? "active" : ""}
+                            ${cell === "hihatOpen" ? "open-hihat" : ""}
+                            ${currentStep === globalColIndex ? "playing" : ""}
+                            ${isBeatStart ? "beat-start" : ""}
+                            ${cellIndex === 0 && isFirstSegment ? "bar-start" : ""}
+                          `}
+                          onClick={() =>
+                            handleCellClick(rowIndex, globalColIndex)
+                          }
+                          aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${globalColIndex - barIndex * stepsPerBar + 1}`}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const handleTrackIconClick = (e, trackIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    // Get the position for the context menu
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    setTrackContextMenu({
+      visible: true,
+      trackIndex,
+      x: rect.right,
+      y: rect.top,
+    });
+  };
+
+  const closeContextMenu = () => {
+    setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
+  };
+
+  // Setup click outside listener to close context menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        trackContextMenu.visible &&
+        !e.target.closest(".track-context-menu") &&
+        !e.target.closest(".track-icon")
+      ) {
+        closeContextMenu();
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [trackContextMenu.visible]);
 
   // Handlers
   //
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
-    newPattern[row][col] = !newPattern[row][col];
-    setPattern(newPattern);
 
-    // Play the sound when activating a cell
-    if (newPattern[row][col] && drumMachineRef.current) {
-      drumMachineRef.current.playSound(drumSounds[row]);
+    // Handle special tracks with multiple states
+    if (specialTracks[row]) {
+      const currentState = newPattern[row][col];
+      const track = specialTracks[row];
+      const nextState = track.nextState[currentState];
+
+      newPattern[row][col] = nextState;
+      setPattern(newPattern);
+
+      // Play the appropriate sound when activating a cell
+      if (nextState && drumMachineRef.current) {
+        // This will automatically choke other sounds in the same group
+        drumMachineRef.current.playSound(nextState);
+      }
+    } else {
+      // Handle regular tracks (binary on/off)
+      const newState = !newPattern[row][col];
+      newPattern[row][col] = newState;
+      setPattern(newPattern);
+
+      // Play the sound when activating a cell
+      if (newState && drumMachineRef.current) {
+        drumMachineRef.current.playSound(drumSounds[row]);
+      }
     }
   };
 
@@ -377,9 +654,8 @@ export default function Editor({ id, newTab }) {
       }
       setIsPlaying(false);
     } else {
-      // Calculate step time based on BPM, time signature, and subdivision
       const quarterNoteTime = (60 * 1000) / bpm;
-      const stepTime = quarterNoteTime / subdivision;
+      const stepTime = quarterNoteTime / SUBDIVISION;
 
       let step = 0;
       const totalPatternSteps = calculateTotalSteps();
@@ -387,17 +663,21 @@ export default function Editor({ id, newTab }) {
       intervalRef.current = setInterval(() => {
         setCurrentStep(step);
 
-        // Play sounds for current step
-        pattern.forEach((row, rowIndex) => {
-          if (row[step] && drumMachineRef.current) {
-            drumMachineRef.current.playSound(drumSounds[rowIndex]);
-          }
-        });
+        // Play sounds for current step, skipping hidden tracks
+        if (drumMachineRef.current) {
+          // Filter out hidden tracks before playing
+          const visiblePattern = pattern.map((row, index) =>
+            hiddenTracks[index] ? Array(row.length).fill(false) : row,
+          );
+
+          // Use the filtered pattern for playback
+          drumMachineRef.current.playStep(visiblePattern, step, drumSounds);
+        }
 
         step = (step + 1) % totalPatternSteps;
 
         // Scroll to the bar containing the current step if needed
-        const stepsPerBar = timeSignature.numerator * subdivision;
+        const stepsPerBar = timeSignature.numerator * 4;
         const currentBarIndex = Math.floor(step / stepsPerBar);
 
         // Only scroll on larger screens where bars are arranged vertically
@@ -435,14 +715,33 @@ export default function Editor({ id, newTab }) {
         tsNumerator: timeSignature.numerator,
         tsDenominator: timeSignature.denominator,
         measures: bars,
-        subdivision,
-        tracks: pattern.map((patternRow, index) => ({
-          id: `track-${index + 1}`,
-          name: drumSounds[index],
-          sound: drumSounds[index],
-          pattern: patternRow,
-        })),
-        stepsPerMeasure: timeSignature.numerator * subdivision,
+        // Store the current instrument order for future compatibility
+        instrumentOrder: [...drumSounds],
+        tracks: pattern.map((patternRow, index) => {
+          const sound = drumSounds[index];
+          const trackId = `track-${sound}`;
+
+          // Handle special tracks like hihat
+          if (specialTracks[index]) {
+            return {
+              id: trackId,
+              name: sound,
+              sound: sound,
+              pattern: patternRow,
+              // Add metadata for special track states
+              states: specialTracks[index].states,
+            };
+          }
+
+          // Regular tracks
+          return {
+            id: trackId,
+            name: sound,
+            sound: sound,
+            pattern: patternRow,
+          };
+        }),
+        // stepsPerMeasure: timeSignature.numerator * SUBDIVISION,
         volume: 0.7,
       };
 
@@ -649,32 +948,6 @@ export default function Editor({ id, newTab }) {
               </div>
             </div>
 
-            {/* Note Resolution Control */}
-            <div className="subdivision-control flex items-center gap-2">
-              <label className="text-sm text-gray-600">Note Resolution:</label>
-              <div className="flex">
-                <select
-                  value={subdivision}
-                  onChange={(e) =>
-                    handleSubdivisionChange(parseInt(e.target.value))
-                  }
-                  className="p-1 border border-gray-300 rounded-md"
-                >
-                  <option value="2">8th Notes</option>
-                  <option value="4">16th Notes</option>
-                  <option value="8">32nd Notes</option>
-                </select>
-              </div>
-              <span className="text-xs text-gray-500">
-                {subdivision === 2
-                  ? "8th"
-                  : subdivision === 4
-                    ? "16th"
-                    : "32nd"}{" "}
-                notes
-              </span>
-            </div>
-
             <div className="text-xs text-gray-500 mt-1 col-span-full">
               Note: Changing time signature, bar count, or note resolution will
               resize your pattern. Existing beats will be preserved when
@@ -694,117 +967,114 @@ export default function Editor({ id, newTab }) {
 
       {/* Drum grid with bar-based layout */}
       {isLoaded && (
-        <div className="sequencer">
+        <div className="sequencer" ref={sequencerRef}>
           {/* Bars container - vertical wrapping happens here */}
           <div className="bars-container">
             {Array(bars)
               .fill(0)
               .map((_, barIndex) => {
                 // Calculate step range for this bar
-                const stepsPerBar = timeSignature.numerator * subdivision;
+                const stepsPerBar = timeSignature.numerator * SUBDIVISION;
                 const startStep = barIndex * stepsPerBar;
                 const endStep = startStep + stepsPerBar;
 
-                return (
-                  <div key={barIndex} className="bar-section">
-                    {/* Bar number indicator */}
-                    <div className="bar-number">{barIndex + 1}</div>
-
-                    <div className="bar-actions">
-                      <button
-                        onClick={() => duplicateBar(barIndex)}
-                        className="duplicate-bar-btn"
-                        title="Duplicate this bar"
-                        aria-label="Duplicate bar"
-                      >
-                        <DuplicateIcon />
-                      </button>
-                    </div>
-
-                    {/* Beat markers for this bar */}
-                    <div className="measure-indicators">
-                      <div className="beat-markers">
-                        {Array(timeSignature.numerator)
-                          .fill(0)
-                          .map((_, beatIndex) => (
-                            <div key={beatIndex} className="beat-marker-group">
-                              {Array(subdivision)
-                                .fill(0)
-                                .map((_, subIndex) => {
-                                  const step =
-                                    beatIndex * subdivision + subIndex;
-                                  // Determine what type of marker to display
-                                  const isMainBeat = subIndex === 0;
-                                  const isEighthNote =
-                                    subdivision >= 2 &&
-                                    subIndex % (subdivision / 2) === 0;
-                                  const isSixteenthNote =
-                                    subdivision >= 4 &&
-                                    subIndex % (subdivision / 4) === 0;
-
-                                  return (
-                                    <div
-                                      key={step}
-                                      className={`step-marker
-                                        ${isMainBeat ? "beat-marker" : ""}
-                                        ${!isMainBeat && isEighthNote ? "eighth-marker" : ""}
-                                        ${!isMainBeat && !isEighthNote && isSixteenthNote ? "sixteenth-marker" : ""}`}
-                                    >
-                                      {isMainBeat ? beatIndex + 1 : ""}
-                                    </div>
-                                  );
-                                })}
-                            </div>
-                          ))}
-                      </div>
-                    </div>
-
-                    {/* Drum rows for this bar */}
-                    <div className="drum-rows-container">
-                      {pattern.map((row, rowIndex) => (
-                        <div key={rowIndex} className="drum-row">
-                          {/* Instrument name - show only in first bar or on smaller screens */}
-                          {barIndex === 0 ? (
-                            <div className="drum-name">
-                              {drumSounds[rowIndex]}
-                            </div>
-                          ) : null}
-                          {/* Grid cells for this bar */}
-                          <div
-                            className={`drum-grid resolution-${subdivision}`}
-                            style={{
-                              width: `${timeSignature.numerator * subdivision * 29}px`,
-                            }}
-                          >
-                            {row
-                              .slice(startStep, endStep)
-                              .map((cell, cellIndex) => {
-                                const globalColIndex = startStep + cellIndex;
-                                const isBeatStart = cellIndex % 4 === 0;
-
-                                return (
-                                  <button
-                                    key={cellIndex}
-                                    className={`drum-cell
-                                    ${cell ? "active" : ""}
-                                    ${currentStep === globalColIndex ? "playing" : ""}
-                                    ${isBeatStart ? "beat-start" : ""}
-                                    ${cellIndex === 0 ? "bar-start" : ""}
-                                  `}
-                                    onClick={() =>
-                                      handleCellClick(rowIndex, globalColIndex)
-                                    }
-                                    aria-label={`${drumSounds[rowIndex]} bar ${barIndex + 1}, step ${cellIndex + 1}`}
-                                  />
-                                );
-                              })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                console.log(
+                  `Bar ${barIndex + 1}: stepsPerBar=${stepsPerBar}, cellsPerRow=${cellsPerRow}`,
                 );
+
+                // FORCE TESTING: For testing purposes, always split the bar if it has more than 8 steps
+                // Remove this for production and use the calculation below
+                if (stepsPerBar > 8) {
+                  // Force 8 cells per segment for testing
+                  const forcedSegments = Math.ceil(stepsPerBar / 8);
+                  console.log(
+                    `Forcing ${forcedSegments} segments for bar ${barIndex + 1}`,
+                  );
+
+                  return Array(forcedSegments)
+                    .fill(0)
+                    .map((_, segmentIndex) => {
+                      const segmentStart = startStep + segmentIndex * 8;
+                      const segmentEnd = Math.min(
+                        startStep + (segmentIndex + 1) * 8,
+                        endStep,
+                      );
+
+                      console.log(
+                        `Bar ${barIndex + 1} Segment ${segmentIndex}: ${segmentStart} - ${segmentEnd}`,
+                      );
+
+                      return renderBar(
+                        barIndex,
+                        segmentStart,
+                        segmentEnd,
+                        segmentIndex,
+                        stepsPerBar,
+                      );
+                    });
+                }
+
+                // Fallback - render the entire bar
+                return renderBar(barIndex, startStep, endStep, 0, stepsPerBar);
               })}
+          </div>
+        </div>
+      )}
+
+      {/* Track Context Menu */}
+      {trackContextMenu.visible && (
+        <div
+          className="track-context-menu"
+          style={{
+            top: `${trackContextMenu.y}px`,
+            left: `${trackContextMenu.x}px`,
+          }}
+        >
+          <div
+            className="menu-item"
+            onClick={() => toggleTrackVisibility(trackContextMenu.trackIndex)}
+          >
+            {hiddenTracks[trackContextMenu.trackIndex] ? (
+              <EyeIcon />
+            ) : (
+              <EyeOffIcon />
+            )}
+            {hiddenTracks[trackContextMenu.trackIndex]
+              ? "Show Track"
+              : "Hide Track"}
+          </div>
+
+          <div
+            className="menu-item"
+            onClick={() => {
+              const newHiddenTracks = {};
+              drumSounds.forEach((_, index) => {
+                newHiddenTracks[index] = index !== trackContextMenu.trackIndex;
+              });
+              setHiddenTracks(newHiddenTracks);
+              closeContextMenu();
+            }}
+          >
+            <SoloIcon />
+            Solo This Track
+          </div>
+
+          <div
+            className="menu-item"
+            onClick={() => {
+              setHiddenTracks({});
+              closeContextMenu();
+            }}
+          >
+            <GridIcon />
+            Show All Tracks
+          </div>
+
+          {/* Additional context menu items can be added here */}
+          <div className="divider"></div>
+          <div className="menu-item" onClick={closeContextMenu}>
+            <CloseIcon />
+            Cancel
           </div>
         </div>
       )}

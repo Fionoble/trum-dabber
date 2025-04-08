@@ -12,30 +12,32 @@
 .bars-container {
   display: flex;
   flex-wrap: wrap;
-  gap: 20px;
+  row-gap: 16px;
   width: 100%;
+  justify-content: flex-start; // Align to the left
 }
 
 // Each bar section (includes beats, instrument names, grid for one bar)
 .bar-section {
-  flex: 1 1 auto;
-  min-width: 300px; // Minimum width before wrapping
+  flex: 0 1 auto; // Don't grow, but can shrink
+  min-width: auto; // Let content determine minimum width
   max-width: 100%;
-  margin-bottom: 30px;
+  margin-bottom: 20px;
   border: 1px solid #eaeaea;
   border-radius: 4px;
-  padding: 15px;
+  padding: 12px;
   position: relative;
+  width: fit-content; // Only as wide as needed
 
-  /* @media (min-width: 768px) {
-    // On larger screens, limit width to allow multiple bars per row
-    max-width: calc(100% - 20px); // Account for gap
-  }*/
+  // Special visual treatment for continuation segments
+  &.continuation {
+    border-left: 1px solid #4f46e5;
+  }
 
-  /* @media (min-width: 1200px) {
-    // On very large screens, allow 3 bars per row
-    max-width: calc(50% - 20px); // Account for gap
-  } */
+  // Styling for different segment positions
+  &.segment-0 {
+    border-left: 3px solid #4f46e5;
+  }
 }
 
 // Bar number indicator
@@ -81,31 +83,173 @@
   }
 }
 
+// New bar content layout with synchronized scrolling
+.bar-content-wrapper {
+  display: flex;
+  width: 100%;
+
+  &.first-bar {
+    // Styles specific to the first bar
+  }
+
+  &.secondary-bar {
+    // Styles specific to secondary bars
+    // No left column, so can use more space
+  }
+}
+
+// Column for instrument names
+.drum-names-column {
+  width: 60px;
+  min-width: 60px;
+  flex-shrink: 0;
+}
+
+.drum-name-wrapper {
+  height: 24px; // Match the height of drum rows
+  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+
+  &:last-child {
+    margin-bottom: 0; // Remove margin from the last row
+  }
+
+  &.hidden-track {
+    height: 30px;
+    opacity: 0.4;
+    margin-bottom: 4px;
+  }
+}
+
+// Scrollable container for all grids
+.scrollable-grid-container {
+  flex: 1 1 auto; // Grow and shrink as needed
+  overflow-x: auto; // Only this container scrolls horizontally
+  overflow-y: hidden;
+  scroll-behavior: smooth; // Smooth scrolling
+  scrollbar-width: thin;
+  scrollbar-color: #ccc transparent;
+
+  // With instrument names column (first bar)
+  &.with-names {
+    max-width: calc(100% - 60px); // Account for instrument column width
+  }
+
+  // Full width (secondary bars)
+  &.full-width {
+    width: 100%;
+  }
+
+  // Custom scrollbar for WebKit browsers
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: #ccc;
+    border-radius: 2px;
+  }
+}
+
 // Container for all drum rows in a single bar
 .drum-rows-container {
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: max-content; // Force width to contain all cells without wrapping
+  min-width: 100%; // At minimum, fill the available space
 }
 
 // Each row for a single instrument in a bar
 .drum-row {
   display: flex;
   align-items: center;
-  margin-bottom: 8px;
-  width: 100%;
+  margin-bottom: 6px;
+  height: 24px;
+
+  &:last-child {
+    margin-bottom: 0; // Remove margin from the last row
+  }
 }
 
 // Instrument names
 .drum-name {
-  width: 60px;
-  min-width: 60px;
+  width: 100%;
   color: #333;
   font-family: monospace;
   text-transform: uppercase;
   font-weight: 600;
   text-align: right;
   padding-right: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  position: relative;
+
+  .track-icon {
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #555;
+    border-radius: 4px;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease;
+    position: relative;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #4f46e5;
+    }
+
+    &:active {
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+
+    // Hidden track styling
+    &.hidden-track {
+      opacity: 0.5;
+      color: #999;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: currentColor;
+        transform: rotate(-45deg);
+      }
+    }
+  }
+
+  .track-tooltip {
+    position: absolute;
+    top: -25px;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 50;
+  }
+
+  .track-icon:hover .track-tooltip {
+    opacity: 1;
+  }
 
   &.repeat-instrument {
     opacity: 0.6; // Fade out repeated instrument names
@@ -119,29 +263,73 @@
   }
 }
 
+// Track context menu
+.track-context-menu {
+  position: fixed;
+  background-color: white;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+  padding: 4px 0;
+  min-width: 150px;
+  z-index: 100;
+
+  .menu-item {
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .divider {
+    height: 1px;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 4px 0;
+  }
+}
+
+// Hidden track styling
+.drum-row.hidden-track {
+  opacity: 0.4;
+  height: 32px;
+  overflow: hidden;
+  margin-bottom: 4px;
+  transition: all 0.3s ease;
+
+  .drum-grid {
+    display: none;
+  }
+}
+
 // Grid for a single bar of an instrument
 .drum-grid {
   display: flex;
-  flex: 1;
-  gap: 4px;
-  overflow-x: auto; // Allow horizontal scrolling within bar on small screens
-
-  @media (min-width: 576px) {
-    overflow-x: visible; // No scrolling needed on larger screens
-  }
+  gap: 2px;
+  width: max-content;
 }
 
 // Individual cell styling
 .drum-cell {
-  flex: 1;
-  min-width: 25px;
-  min-height: 25px;
-  aspect-ratio: 1;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
   border: 1px solid #ccc;
   border-radius: 2px;
   background-color: #f5f5f5;
   transition: all 0.1s ease;
   position: relative;
+  padding: 0;
 
   &:hover {
     background-color: #e5e5e5;
@@ -156,6 +344,23 @@
     border-color: #2e7d32;
   }
 
+  &.open-hihat {
+    background-color: #8bc34a;
+    border-color: #689f38;
+    position: relative;
+
+    &::after {
+      content: "O";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 10px;
+      color: white;
+      font-weight: bold;
+    }
+  }
+
   &.playing {
     box-shadow: 0 0 0 2px rgba(66, 135, 245, 0.6);
   }
@@ -164,27 +369,6 @@
     background-color: #66bb6a;
     box-shadow: 0 0 0 2px rgba(66, 135, 245, 0.6);
     transform: scale(1.05);
-  }
-
-  // Bar start indicators
-  &.bar-start {
-    border-left: 2px solid #666;
-  }
-
-  // Beat start indicators
-  &.beat-start {
-    border-left-color: #999;
-
-    /* &::before {
-      content: attr(data-beat);
-      position: absolute;
-      top: -16px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 10px;
-      color: #777;
-      pointer-events: none;
-    } */
   }
 }
 
@@ -311,28 +495,61 @@ input[type="range"]::-moz-range-thumb:hover {
 /* Mobile-specific adjustments */
 @media (max-width: 767px) {
   .bar-section {
-    min-width: 100%; // Full width on mobile
-    padding: 10px;
+    width: 100%; // Full width on mobile
+    max-width: 100%;
+    padding: 8px;
+
+    &.continuation {
+      margin-top: -10px; // Smaller margin on mobile
+    }
+  }
+
+  .bars-container {
+    gap: 12px;
+  }
+
+  .drum-names-column {
+    width: 36px;
+    min-width: 36px;
   }
 
   .drum-name {
-    width: 50px;
-    min-width: 50px;
     font-size: 0.85rem;
   }
 
-  .drum-cell {
-    min-width: 22px;
-    min-height: 22px;
+  .scrollable-grid-container {
+    &.with-names {
+      max-width: calc(100% - 36px); // Account for smaller instrument column
+    }
+  }
+
+  .drum-name-wrapper,
+  .drum-row {
+    height: 22px;
+    margin-bottom: 4px;
   }
 
   .drum-grid {
-    overflow-x: auto; // Always allow horizontal scrolling on mobile
+    gap: 1px; // Even smaller gap on mobile
+  }
+
+  .drum-cell {
+    width: 14px; // Smaller fixed width on mobile
+    height: 14px; // Smaller fixed height on mobile
   }
 
   .bar-number {
     font-size: 10px;
     padding: 1px 6px;
+  }
+
+  .bar-content-wrapper {
+    overflow: hidden; // Prevent horizontal overflow on mobile
+  }
+
+  // Scale down the open hi-hat indicator on mobile
+  .drum-cell.open-hihat::after {
+    font-size: 8px;
   }
 }
 
@@ -359,47 +576,6 @@ input[type="range"]::-moz-range-thumb:hover {
 
   &:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  }
-}
-
-.eighth-marker {
-  font-weight: 500;
-  color: #999;
-  &::before {
-    content: "";
-    position: absolute;
-    height: 8px;
-    width: 1px;
-    background-color: #999;
-    bottom: -12px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-
-.sixteenth-marker {
-  font-weight: normal;
-  color: #bbb;
-  &::before {
-    content: "";
-    position: absolute;
-    height: 4px;
-    width: 1px;
-    background-color: #bbb;
-    bottom: -8px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-
-// Additional styling for 32nd notes
-.drum-grid {
-  // Existing styles...
-
-  // Adjust spacing for higher resolution
-  &.resolution-8 .drum-cell {
-    min-width: 14px;
-    min-height: 25px;
   }
 }
 
