@@ -1,14 +1,23 @@
 export default () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2"
+  <svg
+    width="20"
+    height="20"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    stroke="currentColor"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <ellipse cx="12" cy="14" rx="9" ry="7" />
-    <line x1="3" y1="14" x2="21" y2="14" />
+    <rect
+      x="4"
+      y="6"
+      width="12"
+      height="8"
+      stroke="black"
+      stroke-width="1.5"
+      fill="none"
+    />
+    <line x1="6" y1="14" x2="6" y2="18" stroke="black" stroke-width="1" />
+    <line x1="14" y1="14" x2="14" y2="18" stroke="black" stroke-width="1" />
   </svg>
 );
