@@ -10,21 +10,26 @@ import cowbellSound from "../assets/sounds/cowbell.wav";
 
 export class DrumMachine {
   constructor() {
-    this.audioContext = new (window.AudioContext ||
-      window.webkitAudioContext)();
+    if (window.sharedAudioContext) {
+      this.audioContext = window.sharedAudioContext;
+      if (this.audioContext.state === "suspended") {
+        this.audioContext.resume();
+      }
+    } else {
+      this.audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      window.sharedAudioContext = this.audioContext;
+    }
+
     this.samples = {};
     this.isLoaded = false;
     this.masterGain = this.audioContext.createGain();
     this.masterGain.gain.value = 0.7; // Set default volume
     this.masterGain.connect(this.audioContext.destination);
-    
-    // Track active sound sources by instrument group
     this.activeSources = {};
-    
-    // Define instrument groups (sounds that should cut each other off)
     this.instrumentGroups = {
-      "hihat": "hihat-group",
-      "hihatOpen": "hihat-group"
+      hihat: "hihat-group",
+      hihatOpen: "hihat-group",
     };
   }
 
@@ -54,7 +59,6 @@ export class DrumMachine {
               await this.audioContext.decodeAudioData(arrayBuffer);
           } catch (err) {
             console.error(`Error loading sample ${name}:`, err);
-            // Provide fallback for missing samples - create a simple tone
             this.samples[name] = this.createTone(name);
           }
         },
@@ -158,30 +162,33 @@ export class DrumMachine {
     // Generate sound based on the method
     for (let i = 0; i < channelData.length; i++) {
       const t = i / sampleRate;
-      
+
       // Calculate amplitude envelope with exponential decay
       const amplitude = Math.exp(-t / decay);
-      
+
       // Calculate pitch envelope (frequency drops over time for toms and kicks)
       const currentFreq = frequency * Math.exp(-t / pitchDecay);
-      
+
       let sample = 0;
-      
+
       if (method === "sine" || method === "mix") {
         // Sine wave component
         sample += Math.sin(2 * Math.PI * currentFreq * t) * (1 - noiseMix);
       }
-      
+
       if (method === "square" || method === "mix") {
         // Square wave component
-        sample += Math.sign(Math.sin(2 * Math.PI * currentFreq * t)) * 0.5 * (1 - noiseMix);
+        sample +=
+          Math.sign(Math.sin(2 * Math.PI * currentFreq * t)) *
+          0.5 *
+          (1 - noiseMix);
       }
-      
+
       if (method === "noise" || method === "mix") {
         // Noise component
         sample += (Math.random() * 2 - 1) * noiseMix;
       }
-      
+
       // Apply amplitude envelope
       channelData[i] = sample * amplitude;
     }
@@ -189,34 +196,30 @@ export class DrumMachine {
     return buffer;
   }
 
-  playSound(sampleName, time = 0) {
+  async playSound(sampleName, time = 0) {
     if (!this.samples[sampleName]) {
       console.warn(`Sample ${sampleName} not found`);
       return;
     }
 
-    // Resume audio context if it's suspended (needed due to autoplay policies)
     if (this.audioContext.state === "suspended") {
-      this.audioContext.resume();
+      await this.audioContext.resume();
     }
 
-    // Check if this sound is part of an instrument group (like hi-hats)
     const group = this.instrumentGroups[sampleName];
-    
-    // If this sound is part of a group and there's an active sound playing in that group
+
     if (group && this.activeSources[group]) {
-      // Stop all active sources in this group with a quick fade-out
       const now = this.audioContext.currentTime;
       for (const activeSource of this.activeSources[group]) {
         if (activeSource.gainNode && !activeSource.isStopping) {
-          // Mark as stopping to avoid multiple fades
           activeSource.isStopping = true;
-          // Quick fade out to avoid clicks (10ms)
           activeSource.gainNode.gain.cancelScheduledValues(now);
-          activeSource.gainNode.gain.setValueAtTime(activeSource.gainNode.gain.value, now);
+          activeSource.gainNode.gain.setValueAtTime(
+            activeSource.gainNode.gain.value,
+            now,
+          );
           activeSource.gainNode.gain.linearRampToValueAtTime(0, now + 0.01);
-          
-          // Schedule source stop after fade out
+
           setTimeout(() => {
             try {
               activeSource.source.stop();
@@ -226,82 +229,76 @@ export class DrumMachine {
           }, 15);
         }
       }
-      
-      // Clear the active sources for this group
+
       this.activeSources[group] = [];
     }
 
     const source = this.audioContext.createBufferSource();
     source.buffer = this.samples[sampleName];
 
-    // Create a gain node for this specific sound
     const gainNode = this.audioContext.createGain();
     source.connect(gainNode);
     gainNode.connect(this.masterGain);
-
-    // Start the sound
     source.start(this.audioContext.currentTime + time);
-    
-    // If this sound is part of a group, add it to active sources
+
     if (group) {
       if (!this.activeSources[group]) {
         this.activeSources[group] = [];
       }
-      
-      // Store both the source and its gain node so we can fade it out later
+
       this.activeSources[group].push({
         source,
         gainNode,
-        isStopping: false
+        isStopping: false,
       });
-      
-      // Set up event listener to remove the source when it finishes naturally
+
       source.onended = () => {
-        this.activeSources[group] = this.activeSources[group].filter(s => s.source !== source);
+        this.activeSources[group] = this.activeSources[group].filter(
+          (s) => s.source !== source,
+        );
       };
     }
-    
+
     return { source, gainNode };
   }
 
   setVolume(level) {
-    // Set volume between 0 and 1
     const volume = Math.max(0, Math.min(1, level));
     this.masterGain.gain.value = volume;
   }
 
-  // Play all sounds for the current step
-  playStep(pattern, step, sounds) {
-    // Sort the indices to ensure hi-hat closed plays after hi-hat open
-    // This ensures that if both are on the same step, the closed hi-hat chokes the open
-    
-    // First, get all the active sounds for this step
+  async playStep(pattern, step, sounds) {
+    if (this.audioContext.state === "suspended") {
+      try {
+        await this.audioContext.resume();
+      } catch (err) {
+        console.error("Error resuming audio context:", err);
+      }
+    }
+
     const activeSounds = [];
-    
+
     sounds.forEach((sound, index) => {
       const cell = pattern[index][step];
       if (cell) {
-        // If the cell contains a string (sound name), use it; otherwise use the default sound
-        const soundToPlay = typeof cell === 'string' ? cell : sound;
+        const soundToPlay = typeof cell === "string" ? cell : sound;
         activeSounds.push({ index, soundToPlay });
       }
     });
-    
-    // Sort the activeSounds so that hi-hat closed plays after hi-hat open
-    // This ensures the choke behavior works consistently in a step
+
     activeSounds.sort((a, b) => {
-      // If 'a' is hihatOpen and 'b' is hihat, then 'a' should play first
-      if (a.soundToPlay === 'hihatOpen' && b.soundToPlay === 'hihat') return -1;
-      // If 'a' is hihat and 'b' is hihatOpen, then 'b' should play first
-      if (a.soundToPlay === 'hihat' && b.soundToPlay === 'hihatOpen') return 1;
-      // Otherwise, preserve original order
+      if (a.soundToPlay === "hihatOpen" && b.soundToPlay === "hihat") return -1;
+      if (a.soundToPlay === "hihat" && b.soundToPlay === "hihatOpen") return 1;
       return a.index - b.index;
     });
-    
-    // Play the sounds in the sorted order
-    activeSounds.forEach(({ soundToPlay }) => {
-      this.playSound(soundToPlay);
-    });
+
+    for (const { soundToPlay } of activeSounds) {
+      try {
+        await this.playSound(soundToPlay);
+      } catch (err) {
+        console.error(`Error playing sound ${soundToPlay}:`, err);
+      }
+    }
   }
 
   stop() {
@@ -311,8 +308,7 @@ export class DrumMachine {
     this.masterGain.gain.setValueAtTime(this.masterGain.gain.value, now);
     this.masterGain.gain.linearRampToValueAtTime(0, now + 0.1);
 
-    // Stop all active sources
-    Object.keys(this.activeSources).forEach(group => {
+    Object.keys(this.activeSources).forEach((group) => {
       if (this.activeSources[group]) {
         for (const activeSource of this.activeSources[group]) {
           try {
@@ -327,12 +323,10 @@ export class DrumMachine {
       }
     });
 
-    // Reset after fade
     setTimeout(() => {
       this.masterGain.gain.value = 0.7;
     }, 100);
 
-    // Suspend audio context after stopping (reduces resource usage)
     setTimeout(() => {
       if (this.audioContext && this.audioContext.state === "running") {
         this.audioContext.suspend().catch((err) => {
@@ -342,18 +336,13 @@ export class DrumMachine {
     }, 200);
   }
 
-  // Add a cleanup method for complete destruction
   cleanup() {
     this.stop();
-    
-    // Clear all active sources
-    Object.keys(this.activeSources).forEach(group => {
+
+    Object.keys(this.activeSources).forEach((group) => {
       this.activeSources[group] = [];
     });
 
-    // Close the audio context completely when no longer needed
-    // Note: Only call this when you're truly done with the context
-    // as creating a new one is resource-intensive
     if (this.audioContext && this.audioContext.state !== "closed") {
       this.audioContext.close().catch((err) => {
         console.warn("Could not close audio context:", err);

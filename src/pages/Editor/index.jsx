@@ -12,8 +12,6 @@ import PlusIcon from "../../assets/icons/Plus.svg.jsx";
 import MinusIcon from "../../assets/icons/Minus.svg.jsx";
 import ChevronDownIcon from "../../assets/icons/ChevronDown.svg.jsx";
 import DuplicateIcon from "../../assets/icons/Duplicate.svg.jsx";
-import TrashIconFilled from "../../assets/icons/TrashIconFilled.svg.jsx";
-import ChevronDown2Icon from "../../assets/icons/ChevronDown2.svg.jsx";
 import EyeIcon from "../../assets/icons/Eye.svg.jsx";
 import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
 import SoloIcon from "../../assets/icons/Solo.svg.jsx";
@@ -24,19 +22,17 @@ import InstrumentIcons from "../../assets/icons/instruments";
 const MAX_BAR_COUNT = 25;
 const SUBDIVISION = 8;
 const CELLS_PER_ROW = 8; // Default number of cells per row
+const defaultDrumSounds = [
+  "hihat",
+  "hiTom",
+  "snare",
+  "crash",
+  "kick",
+  "floorTom",
+]; // These should come from the drum machine
 
 export default function Editor({ id, newTab }) {
-  const defaultDrumSounds = [
-    "hihat",
-    "hiTom",
-    "snare",
-    "crash",
-    "kick",
-    "floorTom",
-  ]; // These should come from the drum machine
   const [drumSounds, setDrumSounds] = useState(defaultDrumSounds);
-
-  // Instrument visibility state
   const [hiddenTracks, setHiddenTracks] = useState({});
   const [trackContextMenu, setTrackContextMenu] = useState({
     visible: false,
@@ -44,34 +40,7 @@ export default function Editor({ id, newTab }) {
     x: 0,
     y: 0,
   });
-
-  // Define special tracks that can have multiple states
-  // This is dynamically calculated based on the current instrument order
   const [specialTracks, setSpecialTracks] = useState({});
-
-  // Update special tracks when instrument order changes
-  useEffect(() => {
-    // Find the index of the hihat in the current instrument order
-    const hihatIndex = drumSounds.indexOf("hihat");
-
-    if (hihatIndex !== -1) {
-      setSpecialTracks({
-        [hihatIndex]: {
-          // hihat track index - dynamically determined
-          states: [false, "hihat", "hihatOpen"],
-          nextState: {
-            false: "hihat",
-            hihat: "hihatOpen",
-            hihatOpen: false,
-          },
-        },
-      });
-    } else {
-      setSpecialTracks({});
-    }
-  }, [drumSounds]);
-
-  // States
   const [isLoaded, setIsLoaded] = useState(false);
   const [tabName, setTabName] = useState("New Beat");
   const [tabId, setTabId] = useState(null);
@@ -81,11 +50,7 @@ export default function Editor({ id, newTab }) {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [cellsPerRow, setCellsPerRow] = useState(0);
-  const [expandedBarMenu, setExpandedBarMenu] = useState(null);
 
-  // Time signature and bars
   const [timeSignature, setTimeSignature] = useState({
     numerator: 4,
     denominator: 4,
@@ -102,10 +67,8 @@ export default function Editor({ id, newTab }) {
   const [totalSteps, setTotalSteps] = useState(calculateTotalSteps());
 
   const createEmptyPattern = (steps) => {
-    // Make sure steps is a positive integer
     const validSteps = Math.max(1, Math.floor(Number(steps) || 1));
-    return drumSounds.map((sound, index) => {
-      // For special tracks with multiple states, we need to store string values
+    return drumSounds.map((_, index) => {
       if (specialTracks[index]) {
         return Array(validSteps).fill(false);
       }
@@ -115,31 +78,65 @@ export default function Editor({ id, newTab }) {
 
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
 
-  // Refs
   const drumMachineRef = useRef(null);
   const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
   const sequencerRef = useRef(null);
-  const resizeObserverRef = useRef(null);
 
-  const { route } = useLocation();
+  const location = useLocation();
+  const { route } = location;
 
-  // Initialize drum machine and load tab if exists
+  useEffect(() => {
+    if (isPlaying && drumMachineRef.current) {
+      clearInterval(intervalRef.current);
+      drumMachineRef.current.stop();
+      setIsPlaying(false);
+      setCurrentStep(-1);
+    }
+
+    return () => {
+      if (drumMachineRef.current) drumMachineRef.current.stop();
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        setIsPlaying(false);
+        setCurrentStep(-1);
+      }
+    };
+  }, [location.url]);
+
+  useEffect(() => {
+    const hihatIndex = drumSounds.indexOf("hihat");
+
+    if (hihatIndex !== -1) {
+      setSpecialTracks({
+        [hihatIndex]: {
+          states: [false, "hihat", "hihatOpen"],
+          nextState: {
+            false: "hihat",
+            hihat: "hihatOpen",
+            hihatOpen: false,
+          },
+        },
+      });
+    } else {
+      setSpecialTracks({});
+    }
+  }, [drumSounds]);
+
   useEffect(async () => {
     const initDrumMachine = async () => {
       drumMachineRef.current = new DrumMachine();
+      window.globalDrumMachine = drumMachineRef.current;
       await drumMachineRef.current.loadSamples();
       setIsLoaded(true);
     };
 
-    // Load user's configured instruments
     const loadInstruments = async () => {
       try {
         const savedInstruments = await tabStorage.getUserInstruments();
         setDrumSounds(savedInstruments);
       } catch (error) {
         console.error("Error loading instruments:", error);
-        // Use default instruments if there's an error
         setDrumSounds(defaultDrumSounds);
       }
     };
@@ -168,20 +165,15 @@ export default function Editor({ id, newTab }) {
 
     const handleVisibilityChange = () => {
       if (document.hidden && isPlaying) {
-        // User switched tabs or minimized window
         if (intervalRef.current) clearInterval(intervalRef.current);
-        if (drumMachineRef.current) {
-          drumMachineRef.current.stop();
-        }
+        drumMachineRef?.current?.stop();
         setIsPlaying(false);
         setCurrentStep(-1);
       }
     };
 
     const handleBeforeUnload = () => {
-      if (drumMachineRef.current) {
-        drumMachineRef.current.stop();
-      }
+      drumMachineRef?.current?.stop();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -189,15 +181,13 @@ export default function Editor({ id, newTab }) {
 
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      if (drumMachineRef.current) {
-        drumMachineRef.current.stop();
-      }
+      drumMachineRef?.current?.stop();
+      window.globalDrumMachine = null;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
   }, [isLoading.value, isAuthenticated.value]);
 
-  // Update total steps when time signature or bar change
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
 
@@ -208,48 +198,6 @@ export default function Editor({ id, newTab }) {
       resizePattern(newTotalSteps);
     }
   }, [timeSignature, bars]);
-
-  // Set up resize observer to track container width and calculate cells per row
-  useEffect(() => {
-    // Set a default value for cells per row - this guarantees we have a value for initial rendering
-    setCellsPerRow(8); // Start with 8 cells per row by default
-
-    // Wait for the component to fully mount
-    setTimeout(() => {
-      if (!sequencerRef.current) {
-        console.log("Sequencer ref not available yet");
-        return;
-      }
-
-      const handleResize = (entries) => {
-        for (let entry of entries) {
-          const width = entry.contentRect.width;
-          console.log("Container width:", width);
-          setContainerWidth(width);
-          setCellsPerRow(CELLS_PER_ROW);
-        }
-      };
-
-      // Create resize observer
-      try {
-        resizeObserverRef.current = new ResizeObserver(handleResize);
-        resizeObserverRef.current.observe(sequencerRef.current);
-
-        // Initial calculation
-        setContainerWidth(sequencerRef.current.offsetWidth);
-        setCellsPerRow(CELLS_PER_ROW);
-        console.log("Initial width:", sequencerRef.current.offsetWidth);
-      } catch (err) {
-        console.error("Error setting up ResizeObserver:", err);
-      }
-    }, 500); // 500ms delay to ensure DOM is ready
-
-    return () => {
-      if (resizeObserverRef.current) {
-        resizeObserverRef.current.disconnect();
-      }
-    };
-  }, [isLoaded]); // Re-run when isLoaded changes to ensure DOM elements exist
 
   const duplicateBar = (barIndex) => {
     // Stop playback if in progress to avoid issues
@@ -355,7 +303,6 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  // Resize pattern when total steps change (preserving existing data)
   const resizePattern = (newStepCount) => {
     const newPattern = pattern.map((row) => {
       if (row.length < newStepCount) {
@@ -979,7 +926,7 @@ export default function Editor({ id, newTab }) {
                 const endStep = startStep + stepsPerBar;
 
                 console.log(
-                  `Bar ${barIndex + 1}: stepsPerBar=${stepsPerBar}, cellsPerRow=${cellsPerRow}`,
+                  `Bar ${barIndex + 1}: stepsPerBar=${stepsPerBar}, cellsPerRow=${CELLS_PER_ROW}`,
                 );
 
                 // FORCE TESTING: For testing purposes, always split the bar if it has more than 8 steps
