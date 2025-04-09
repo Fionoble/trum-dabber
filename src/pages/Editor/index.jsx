@@ -335,6 +335,53 @@ export default function Editor({ id, newTab }) {
     setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
   };
 
+  // Bar context menu state
+  const [barContextMenu, setBarContextMenu] = useState({
+    visible: false,
+    barIndex: null,
+    x: 0,
+    y: 0,
+  });
+
+  // Handle bar number click to show context menu
+  const handleBarNumberClick = (e, barIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    
+    setBarContextMenu({
+      visible: true,
+      barIndex,
+      x: rect.right,
+      y: rect.bottom,
+    });
+  };
+
+  // Close bar context menu
+  const closeBarContextMenu = () => {
+    setBarContextMenu({ visible: false, barIndex: null, x: 0, y: 0 });
+  };
+
+  // Setup click outside listener for bar context menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        barContextMenu.visible &&
+        !e.target.closest(".bar-context-menu") &&
+        !e.target.closest(".bar-number")
+      ) {
+        closeBarContextMenu();
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [barContextMenu.visible]);
+
   // Render a bar or bar segment
   const renderBar = (
     barIndex,
@@ -351,20 +398,13 @@ export default function Editor({ id, newTab }) {
         key={key}
         className={`bar-section segment-${segmentIndex} ${isFirstSegment ? "" : "continuation"}`}
       >
-        {/* Only show the bar number on the first segment */}
-        {isFirstSegment && <div className="bar-number">{barIndex + 1}</div>}
-
-        {/* Only show bar actions on the first segment */}
+        {/* Only show the bar number on the first segment, now clickable */}
         {isFirstSegment && (
-          <div className="bar-actions">
-            <button
-              onClick={() => duplicateBar(barIndex)}
-              className="duplicate-bar-btn"
-              title="Duplicate this bar"
-              aria-label="Duplicate bar"
-            >
-              <DuplicateIcon />
-            </button>
+          <div 
+            className="bar-number"
+            onClick={(e) => handleBarNumberClick(e, barIndex)}
+          >
+            {barIndex + 1}
           </div>
         )}
 
@@ -1020,6 +1060,35 @@ export default function Editor({ id, newTab }) {
           {/* Additional context menu items can be added here */}
           <div className="divider"></div>
           <div className="menu-item" onClick={closeContextMenu}>
+            <CloseIcon />
+            Cancel
+          </div>
+        </div>
+      )}
+
+      {/* Bar Context Menu */}
+      {barContextMenu.visible && (
+        <div
+          className="bar-context-menu"
+          style={{
+            top: `${barContextMenu.y}px`,
+            left: `${barContextMenu.x}px`,
+          }}
+        >
+          <div
+            className="menu-item"
+            onClick={() => {
+              duplicateBar(barContextMenu.barIndex);
+              closeBarContextMenu();
+            }}
+          >
+            <DuplicateIcon />
+            Duplicate Bar
+          </div>
+          
+          {/* Additional bar actions can be added here */}
+          <div className="divider"></div>
+          <div className="menu-item" onClick={closeBarContextMenu}>
             <CloseIcon />
             Cancel
           </div>

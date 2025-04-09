@@ -52,6 +52,18 @@
   font-size: 12px;
   font-weight: bold;
   z-index: 5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  
+  &:hover {
+    background: #4338ca;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0px);
+  }
 }
 
 // Beat markers for each bar
@@ -263,8 +275,9 @@
   }
 }
 
-// Track context menu
-.track-context-menu {
+// Track and bar context menus
+.track-context-menu,
+.bar-context-menu {
   position: fixed;
   background-color: white;
   border-radius: 4px;
@@ -581,41 +594,4 @@ input[type="range"]::-moz-range-thumb:hover {
 
 .bar-section {
   position: relative;
-
-  .bar-actions {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    z-index: 10;
-
-    .duplicate-bar-btn {
-      background-color: #4f46e5;
-      color: white;
-      border-radius: 50%;
-      width: 24px;
-      height: 24px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition:
-        transform 0.2s ease,
-        background-color 0.2s ease;
-
-      &:hover {
-        background-color: #4338ca;
-        transform: scale(1.1);
-      }
-
-      &:active {
-        transform: scale(0.95);
-      }
-    }
-  }
-
-  &:hover .bar-actions {
-    opacity: 1;
-  }
 }
