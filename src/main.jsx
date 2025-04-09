@@ -20,50 +20,6 @@ function App() {
     return cleanup;
   }, []);
 
-  useEffect(() => {
-    const handleRouteChange = () => {
-      // Pause any audio elements
-      const audioContexts = document.querySelectorAll("audio");
-      audioContexts.forEach((audio) => {
-        if (!audio.paused) {
-          audio.pause();
-        }
-      });
-      // Stop the drum machine if it exists
-      if (window.globalDrumMachine) {
-        window.globalDrumMachine.stop();
-      }
-    };
-    
-    // Create a more focused observer to specifically detect route changes
-    // This only triggers on navigationEnd events from the router
-    const handleRouteFromRouter = () => {
-      console.log('Router change detected, stopping drum machine if needed');
-      handleRouteChange();
-    };
-    
-    // Add listeners for route changes
-    window.addEventListener('popstate', handleRouteChange);
-    document.addEventListener('routeChangeComplete', handleRouteFromRouter);
-    
-    // Create a simple location listener 
-    let lastPath = window.location.pathname;
-    const locationCheckInterval = setInterval(() => {
-      const currentPath = window.location.pathname;
-      if (currentPath !== lastPath) {
-        console.log(`Path changed: ${lastPath} -> ${currentPath}`);
-        lastPath = currentPath;
-        handleRouteChange();
-      }
-    }, 200); // Check every 200ms
-    
-    return () => {
-      window.removeEventListener("popstate", handleRouteChange);
-      document.removeEventListener('routeChangeComplete', handleRouteFromRouter);
-      clearInterval(locationCheckInterval);
-    };
-  }, []);
-
   return (
     <LocationProvider>
       <Frame>
