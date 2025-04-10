@@ -243,7 +243,7 @@ export default function Editor({ id, newTab }) {
         if (tab.measures) {
           setBars(tab.measures);
         }
-        
+
         // Load bar repeat configuration if available
         if (tab.barRepeats) {
           setBarRepeats(tab.barRepeats);
@@ -347,10 +347,10 @@ export default function Editor({ id, newTab }) {
     x: 0,
     y: 0,
   });
-  
+
   // Bar repeat configuration state
   const [barRepeats, setBarRepeats] = useState({});
-  
+
   // Repeat modal state
   const [repeatModal, setRepeatModal] = useState({
     visible: false,
@@ -365,7 +365,7 @@ export default function Editor({ id, newTab }) {
     e.stopPropagation();
 
     const rect = e.currentTarget.getBoundingClientRect();
-    
+
     setBarContextMenu({
       visible: true,
       barIndex,
@@ -378,10 +378,13 @@ export default function Editor({ id, newTab }) {
   const closeBarContextMenu = () => {
     setBarContextMenu({ visible: false, barIndex: null, x: 0, y: 0 });
   };
-  
+
   // Open repeat modal
   const openRepeatModal = (barIndex) => {
-    const currentRepeat = barRepeats[barIndex] || { repetitions: 1, bars: [barIndex] };
+    const currentRepeat = barRepeats[barIndex] || {
+      repetitions: 1,
+      bars: [barIndex],
+    };
     setRepeatModal({
       visible: true,
       barIndex,
@@ -390,7 +393,7 @@ export default function Editor({ id, newTab }) {
     });
     closeBarContextMenu();
   };
-  
+
   // Close repeat modal
   const closeRepeatModal = () => {
     setRepeatModal({
@@ -400,43 +403,43 @@ export default function Editor({ id, newTab }) {
       barsToRepeat: [],
     });
   };
-  
+
   // Set bar repetition
   const setBarRepetition = () => {
     const { barIndex, repetitions, barsToRepeat } = repeatModal;
-    
+
     if (repetitions < 1 || barsToRepeat.length === 0) {
       closeRepeatModal();
       return;
     }
-    
+
     // Sort the bars to repeat
     const sortedBars = [...barsToRepeat].sort((a, b) => a - b);
-    
-    setBarRepeats(prev => ({
+
+    setBarRepeats((prev) => ({
       ...prev,
       [barIndex]: {
         repetitions,
         bars: sortedBars,
-      }
+      },
     }));
-    
+
     closeRepeatModal();
-    
+
     // If there's a tab ID, save changes
     if (tabId) saveTab(false); // Silent save
   };
-  
+
   // Remove bar repetition
   const removeBarRepetition = (barIndex) => {
-    setBarRepeats(prev => {
-      const newRepeats = {...prev};
+    setBarRepeats((prev) => {
+      const newRepeats = { ...prev };
       delete newRepeats[barIndex];
       return newRepeats;
     });
-    
+
     closeBarContextMenu();
-    
+
     // If there's a tab ID, save changes
     if (tabId) saveTab(false); // Silent save
   };
@@ -478,13 +481,16 @@ export default function Editor({ id, newTab }) {
       >
         {/* Only show the bar number on the first segment, now clickable */}
         {isFirstSegment && (
-          <div 
+          <div
             className="bar-number"
             onClick={(e) => handleBarNumberClick(e, barIndex)}
           >
             {barIndex + 1}
             {barRepeats[barIndex] && (
-              <span className="repeat-indicator" title={`Repeated ${barRepeats[barIndex].repetitions} times`}>
+              <span
+                className="repeat-indicator"
+                title={`Repeated ${barRepeats[barIndex].repetitions} times`}
+              >
                 <PlayIcon /> {barRepeats[barIndex].repetitions}x
               </span>
             )}
@@ -652,10 +658,8 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  const handleBpmChange = (e) => {
+  const handleBpmBlur = (e) => {
     let newBpm = parseInt(e.target.value);
-
-    // Validate BPM range
     if (isNaN(newBpm)) {
       newBpm = 120;
     } else if (newBpm < 40) {
@@ -719,19 +723,19 @@ export default function Editor({ id, newTab }) {
   const getNextStep = (currentStep, totalSteps) => {
     const stepsPerBar = timeSignature.numerator * SUBDIVISION;
     const currentBarIndex = Math.floor(currentStep / stepsPerBar);
-    
+
     // Check if we're at the end of a bar
     if ((currentStep + 1) % stepsPerBar === 0) {
       // This is the last step of the current bar
       const nextBarIndex = currentBarIndex + 1;
-      
+
       // Check if this bar has a repeat configuration
       if (barRepeats[currentBarIndex]) {
         const { repetitions, bars } = barRepeats[currentBarIndex];
-        
+
         // Get the next step based on the bars to repeat and repetition count
         // We implement this as a simple counter in the state to track repetitions
-        
+
         // Initialize repetition counter if not set
         if (!barRepeats[currentBarIndex].currentRepetition) {
           barRepeats[currentBarIndex].currentRepetition = 1;
@@ -739,7 +743,7 @@ export default function Editor({ id, newTab }) {
           // Increment repetition counter
           barRepeats[currentBarIndex].currentRepetition++;
         }
-        
+
         // If we haven't reached the repetition count, jump to the first bar in the sequence
         if (barRepeats[currentBarIndex].currentRepetition <= repetitions) {
           // Jump to the first bar in the bars-to-repeat sequence
@@ -747,13 +751,13 @@ export default function Editor({ id, newTab }) {
         } else {
           // Reset the counter for next time
           barRepeats[currentBarIndex].currentRepetition = 0;
-          
+
           // Continue to the next bar
           return nextBarIndex * stepsPerBar;
         }
       }
     }
-    
+
     // Default: go to the next step
     return (currentStep + 1) % totalSteps;
   };
@@ -766,10 +770,10 @@ export default function Editor({ id, newTab }) {
         drumMachineRef.current.stop();
       }
       setIsPlaying(false);
-      
+
       // Reset all repetition counters
-      const resetRepeats = {...barRepeats};
-      Object.keys(resetRepeats).forEach(barIdx => {
+      const resetRepeats = { ...barRepeats };
+      Object.keys(resetRepeats).forEach((barIdx) => {
         if (resetRepeats[barIdx]) {
           resetRepeats[barIdx].currentRepetition = 0;
         }
@@ -988,7 +992,8 @@ export default function Editor({ id, newTab }) {
             min="40"
             max="240"
             value={bpm}
-            onChange={handleBpmChange}
+            onChange={(e) => setBpm(e.target.value)}
+            onBlur={handleBpmBlur}
             className="w-16 p-1 border border-gray-300 rounded text-center"
           />
         </div>
@@ -1223,7 +1228,7 @@ export default function Editor({ id, newTab }) {
             <DuplicateIcon />
             Duplicate Bar
           </div>
-          
+
           {barRepeats[barContextMenu.barIndex] ? (
             <div
               className="menu-item"
@@ -1241,7 +1246,7 @@ export default function Editor({ id, newTab }) {
               Set Repeat
             </div>
           )}
-          
+
           {/* Additional bar actions can be added here */}
           <div className="divider"></div>
           <div className="menu-item" onClick={closeBarContextMenu}>
@@ -1250,7 +1255,7 @@ export default function Editor({ id, newTab }) {
           </div>
         </div>
       )}
-      
+
       {/* Repeat Modal */}
       {repeatModal.visible && (
         <div className="modal-overlay">
@@ -1261,7 +1266,7 @@ export default function Editor({ id, newTab }) {
                 <CloseIcon />
               </button>
             </div>
-            
+
             <div className="modal-content">
               <div className="repeat-form">
                 <div className="form-group">
@@ -1272,45 +1277,65 @@ export default function Editor({ id, newTab }) {
                     min="1"
                     max="16"
                     value={repeatModal.repetitions}
-                    onChange={(e) => setRepeatModal({
-                      ...repeatModal,
-                      repetitions: Math.max(1, Math.min(16, parseInt(e.target.value) || 1))
-                    })}
+                    onChange={(e) =>
+                      setRepeatModal({
+                        ...repeatModal,
+                        repetitions: e.target.value,
+                      })
+                    }
+                    onBlur={(e) => {
+                      setRepeatModal({
+                        ...repeatModal,
+                        repetitions: Math.max(
+                          1,
+                          Math.min(16, parseInt(e.target.value) || 1),
+                        ),
+                      });
+                    }}
                     className="number-input"
                   />
                 </div>
-                
+
                 <div className="form-group">
                   <label>Bars to Repeat:</label>
                   <div className="bar-selection">
-                    {Array(bars).fill(0).map((_, idx) => (
-                      <button
-                        key={idx}
-                        className={`bar-select-btn ${repeatModal.barsToRepeat.includes(idx) ? 'selected' : ''}`}
-                        onClick={() => {
-                          const newBars = repeatModal.barsToRepeat.includes(idx)
-                            ? repeatModal.barsToRepeat.filter(barIdx => barIdx !== idx)
-                            : [...repeatModal.barsToRepeat, idx];
-                          
-                          setRepeatModal({
-                            ...repeatModal,
-                            barsToRepeat: newBars
-                          });
-                        }}
-                      >
-                        {idx + 1}
-                      </button>
-                    ))}
+                    {Array(bars)
+                      .fill(0)
+                      .map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`bar-select-btn ${repeatModal.barsToRepeat.includes(idx) ? "selected" : ""}`}
+                          onClick={() => {
+                            const newBars = repeatModal.barsToRepeat.includes(
+                              idx,
+                            )
+                              ? repeatModal.barsToRepeat.filter(
+                                  (barIdx) => barIdx !== idx,
+                                )
+                              : [...repeatModal.barsToRepeat, idx];
+
+                            setRepeatModal({
+                              ...repeatModal,
+                              barsToRepeat: newBars,
+                            });
+                          }}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
                   </div>
                   <p className="help-text">
-                    Select the bars you want to repeat. At least one bar must be selected.
+                    Select the bars you want to repeat. At least one bar must be
+                    selected.
                   </p>
                 </div>
               </div>
             </div>
-            
+
             <div className="modal-footer">
-              <button className="cancel-btn" onClick={closeRepeatModal}>Cancel</button>
+              <button className="cancel-btn" onClick={closeRepeatModal}>
+                Cancel
+              </button>
               <button
                 className="apply-btn"
                 onClick={setBarRepetition}
