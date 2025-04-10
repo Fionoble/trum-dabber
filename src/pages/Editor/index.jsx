@@ -84,7 +84,7 @@ export default function Editor({ id, newTab }) {
   const sequencerRef = useRef(null);
 
   const location = useLocation();
-  const { route } = location;
+  const { route, history } = location;
 
   useEffect(() => {
     if (isPlaying && drumMachineRef.current) {
@@ -123,6 +123,26 @@ export default function Editor({ id, newTab }) {
     }
   }, [drumSounds]);
 
+  // Function to initialize a new tab with default values
+  const initNewTab = () => {
+    setTabName("New Beat");
+    setTabId(null);
+    setBpm(120);
+    setTimeSignature({ numerator: 4, denominator: 4 });
+    setBars(1);
+    setBarRepeats({}); // Reset repeats
+    setTotalSteps(calculateTotalSteps());
+    setPattern(createEmptyPattern(calculateTotalSteps()));
+    setCurrentStep(-1);
+
+    // Reset any playing state
+    if (isPlaying) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      drumMachineRef?.current?.stop();
+      setIsPlaying(false);
+    }
+  };
+
   useEffect(async () => {
     const initDrumMachine = async () => {
       drumMachineRef.current = new DrumMachine();
@@ -146,13 +166,7 @@ export default function Editor({ id, newTab }) {
 
     if (newTab) {
       // Handle new tab creation with defaults
-      setTabName("New Beat");
-      setTabId(null);
-      setBpm(120);
-      setTimeSignature({ numerator: 4, denominator: 4 });
-      setBars(1);
-      setTotalSteps(calculateTotalSteps());
-      setPattern(createEmptyPattern(calculateTotalSteps()));
+      initNewTab();
     } else if (id) {
       if (!isLoading.value) {
         if (isAuthenticated.value) {
@@ -186,7 +200,7 @@ export default function Editor({ id, newTab }) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isLoading.value, isAuthenticated.value]);
+  }, [isLoading.value, isAuthenticated.value, id, newTab]);
 
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
@@ -583,7 +597,6 @@ export default function Editor({ id, newTab }) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Get the position for the context menu
     const rect = e.currentTarget.getBoundingClientRect();
 
     setTrackContextMenu({
@@ -598,7 +611,6 @@ export default function Editor({ id, newTab }) {
     setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
   };
 
-  // Setup click outside listener to close context menu
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -617,12 +629,9 @@ export default function Editor({ id, newTab }) {
     };
   }, [trackContextMenu.visible]);
 
-  // Handlers
-  //
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
 
-    // Handle special tracks with multiple states
     if (specialTracks[row]) {
       const currentState = newPattern[row][col];
       const track = specialTracks[row];
@@ -631,18 +640,14 @@ export default function Editor({ id, newTab }) {
       newPattern[row][col] = nextState;
       setPattern(newPattern);
 
-      // Play the appropriate sound when activating a cell
       if (nextState && drumMachineRef.current) {
-        // This will automatically choke other sounds in the same group
         drumMachineRef.current.playSound(nextState);
       }
     } else {
-      // Handle regular tracks (binary on/off)
       const newState = !newPattern[row][col];
       newPattern[row][col] = newState;
       setPattern(newPattern);
 
-      // Play the sound when activating a cell
       if (newState && drumMachineRef.current) {
         drumMachineRef.current.playSound(drumSounds[row]);
       }
@@ -721,48 +726,31 @@ export default function Editor({ id, newTab }) {
     if (isPlaying) togglePlayback();
   };
 
-  // Helper function to determine which step to play next, considering repeats
   const getNextStep = (currentStep, totalSteps) => {
     const stepsPerBar = timeSignature.numerator * SUBDIVISION;
     const currentBarIndex = Math.floor(currentStep / stepsPerBar);
 
-    // Check if we're at the end of a bar
     if ((currentStep + 1) % stepsPerBar === 0) {
-      // This is the last step of the current bar
       const nextBarIndex = currentBarIndex + 1;
 
-      // Check if this bar has a repeat configuration
       if (barRepeats[currentBarIndex]) {
         const { repetitions, bars } = barRepeats[currentBarIndex];
 
-        // Get the next step based on the bars to repeat and repetition count
-        // We implement this as a simple counter in the state to track repetitions
-
-        // Initialize repetition counter if not set
         if (!barRepeats[currentBarIndex].currentRepetition) {
           barRepeats[currentBarIndex].currentRepetition = 1;
         } else {
-          // Increment repetition counter
           barRepeats[currentBarIndex].currentRepetition++;
         }
 
-        // If we haven't reached the repetition count, jump to the first bar in the sequence
-        // Now repetitions represents total number of times to play (including first time)
-        // So we jump back until we've played the sequence repetitions times
         if (barRepeats[currentBarIndex].currentRepetition < repetitions) {
-          // Jump to the first bar in the bars-to-repeat sequence
           return bars[0] * stepsPerBar;
         } else {
-          // Reset the counter for next time
           barRepeats[currentBarIndex].currentRepetition = 0;
-
-          // Continue to the next bar
           return nextBarIndex * stepsPerBar;
         }
       }
     }
 
-    // Default: go to the next step
     return (currentStep + 1) % totalSteps;
   };
 
@@ -828,7 +816,6 @@ export default function Editor({ id, newTab }) {
 
   const saveTab = async (showNotification = true) => {
     if (!isAuthenticated.value) {
-      // Redirect to login if not authenticated
       route("/login?redirect=" + encodeURIComponent(location.pathname));
       return;
     }
@@ -861,12 +848,10 @@ export default function Editor({ id, newTab }) {
               name: sound,
               sound: sound,
               pattern: patternRow,
-              // Add metadata for special track states
               states: specialTracks[index].states,
             };
           }
 
-          // Regular tracks
           return {
             id: trackId,
             name: sound,
@@ -874,7 +859,6 @@ export default function Editor({ id, newTab }) {
             pattern: patternRow,
           };
         }),
-        // stepsPerMeasure: timeSignature.numerator * SUBDIVISION,
         volume: 0.7,
       };
 
@@ -883,10 +867,9 @@ export default function Editor({ id, newTab }) {
       if (savedId) {
         setTabId(savedId);
 
-        // Update URL if it's a new tab
         if (!tabId) {
-          window.history.replaceState(null, "", `/editor/${savedId}`);
-          route(`/editor/${savedId}`);
+          setTabId(savedId); // Update the component's tabId state
+          history.replaceState(null, "", `/editor/${savedId}`);
         }
 
         if (showNotification) {
@@ -896,8 +879,6 @@ export default function Editor({ id, newTab }) {
       }
     } catch (error) {
       console.error("Error saving tab:", error);
-      // You could add an error state here to show the user
-      // setError("Failed to save beat. Please try again.");
     } finally {
       if (showNotification) {
         setIsSaving(false);

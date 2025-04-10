@@ -16,7 +16,6 @@ export default function TabList() {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [error, setError] = useState(null);
-  const [migratedMessage, setMigratedMessage] = useState(false);
 
   useEffect(() => {
     loadTabs();
@@ -34,7 +33,6 @@ export default function TabList() {
 
     try {
       const loadedTabs = await tabStorage.getTabs();
-      // Sort by most recently modified
       loadedTabs.sort((a, b) => new Date(b.modified) - new Date(a.modified));
       setTabs(loadedTabs);
     } catch (error) {
@@ -64,7 +62,6 @@ export default function TabList() {
       }
     } else {
       setDeleteConfirm(id);
-      // Clear confirmation after 3 seconds if not clicked
       setTimeout(() => {
         setDeleteConfirm((state) => (state === id ? null : state));
       }, 3000);
@@ -75,7 +72,6 @@ export default function TabList() {
     setViewMode(viewMode === "grid" ? "list" : "grid");
   };
 
-  // Format date to be more user-friendly
   const formatDate = (dateString) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
@@ -192,7 +188,6 @@ export default function TabList() {
                         {Array(5)
                           .fill(0)
                           .map((_, cellIndex) => {
-                            // Display first 8 steps of each track for visual preview
                             const isActive =
                               tab.tracks &&
                               tab.tracks[cellIndex] &&
