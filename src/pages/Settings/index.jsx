@@ -4,6 +4,7 @@ import { tabStorage } from "../../services/storage";
 import "./styles.scss";
 import { useLocation } from "preact-iso";
 import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
+import PlayIcon from "../../assets/icons/Play.svg.jsx";
 import {
   DndContext,
   closestCenter,
@@ -75,6 +76,10 @@ export default function Settings() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState(null);
   const [instruments, setInstruments] = useState([]);
+  const [playbackSettings, setPlaybackSettings] = useState({
+    countIn: false,
+    loopPlayback: true
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -107,21 +112,49 @@ export default function Settings() {
   ];
 
   useEffect(() => {
-    // Load saved instruments when the component mounts
-    const loadInstruments = async () => {
+    // Load saved instruments and playback settings when the component mounts
+    const loadSettings = async () => {
       try {
         setIsLoading(true);
         const savedInstruments = await tabStorage.getUserInstruments();
+        const savedPlaybackSettings = await tabStorage.getPlaybackSettings();
+        
         setInstruments(savedInstruments);
+        setPlaybackSettings(savedPlaybackSettings);
       } catch (error) {
-        console.error("Failed to load instruments:", error);
+        console.error("Failed to load settings:", error);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadInstruments();
+    loadSettings();
   }, []);
+  
+  // Handler for saving playback settings
+  const handlePlaybackSettingsChange = async (key, value) => {
+    const newSettings = { ...playbackSettings, [key]: value };
+    setPlaybackSettings(newSettings);
+    
+    try {
+      setIsSaving(true);
+      setError(null);
+      
+      const success = await tabStorage.savePlaybackSettings(newSettings);
+      
+      if (success) {
+        setSaveSuccess(true);
+        setTimeout(() => setSaveSuccess(false), 3000);
+      } else {
+        setError("Failed to save playback settings. Please try again.");
+      }
+    } catch (error) {
+      console.error("Failed to save playback settings:", error);
+      setError("An unexpected error occurred. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const openDeleteModal = () => {
     setShowDeleteModal(true);
@@ -336,6 +369,66 @@ export default function Settings() {
               >
                 {isSaving ? "Saving..." : "Save Changes"}
               </button>
+            </div>
+          </>
+        )}
+      </div>
+      
+      {/* Playback Settings Section */}
+      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <PlayIcon className="h-5 w-5 mr-2 text-indigo-600" />
+          Playback
+        </h2>
+
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="spinner"></div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-4">
+              Adjust how drum tracks play back in the editor.
+            </p>
+
+            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
+              <h3 className="text-sm font-medium text-gray-700 mb-2">
+                Playback Options
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="flex items-center">
+                  <input
+                    id="count-in"
+                    type="checkbox"
+                    checked={playbackSettings.countIn}
+                    onChange={(e) => handlePlaybackSettingsChange('countIn', e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label htmlFor="count-in" className="ml-2 text-sm text-gray-700">
+                    Count-in before playing
+                    <p className="text-xs text-gray-500 mt-1">
+                      Play a one-bar count-in before the track starts.
+                    </p>
+                  </label>
+                </div>
+                
+                <div className="flex items-center">
+                  <input
+                    id="loop-playback"
+                    type="checkbox"
+                    checked={playbackSettings.loopPlayback}
+                    onChange={(e) => handlePlaybackSettingsChange('loopPlayback', e.target.checked)}
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                  />
+                  <label htmlFor="loop-playback" className="ml-2 text-sm text-gray-700">
+                    Loop playback
+                    <p className="text-xs text-gray-500 mt-1">
+                      Continue playing from the beginning when the track ends.
+                    </p>
+                  </label>
+                </div>
+              </div>
             </div>
           </>
         )}

@@ -50,6 +50,10 @@ export default function Editor({ id, newTab }) {
   const [bpm, setBpm] = useState(120);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentStep, setCurrentStep] = useState(-1);
+  const [playbackSettings, setPlaybackSettings] = useState({
+    countIn: false,
+    loopPlayback: true
+  });
 
   const [timeSignature, setTimeSignature] = useState({
     numerator: 4,
@@ -151,18 +155,23 @@ export default function Editor({ id, newTab }) {
       setIsLoaded(true);
     };
 
-    const loadInstruments = async () => {
+    const loadSettings = async () => {
       try {
+        // Load instruments
         const savedInstruments = await tabStorage.getUserInstruments();
         setDrumSounds(savedInstruments);
+        
+        // Load playback settings
+        const savedPlaybackSettings = await tabStorage.getPlaybackSettings();
+        setPlaybackSettings(savedPlaybackSettings);
       } catch (error) {
-        console.error("Error loading instruments:", error);
+        console.error("Error loading settings:", error);
         setDrumSounds(defaultDrumSounds);
       }
     };
 
     initDrumMachine();
-    loadInstruments();
+    loadSettings();
 
     if (newTab) {
       // Handle new tab creation with defaults
@@ -751,10 +760,37 @@ export default function Editor({ id, newTab }) {
       }
     }
 
+    // If we've reached the end of the pattern and loop playback is enabled, loop back to start
+    // Otherwise, go to the next step normally (which will loop anyway due to the modulo)
+    if (currentStep + 1 >= totalSteps) {
+      return playbackSettings.loopPlayback ? 0 : -1; // Return -1 to signal end of playback when not looping
+    }
+
     return (currentStep + 1) % totalSteps;
   };
+  
+  // Function to play count-in clicks
+  const playCountIn = async () => {
+    if (!drumMachineRef.current) return;
+    
+    const quarterNoteTime = (60 * 1000) / bpm;
+    const stepsPerBar = timeSignature.numerator;
+    
+    // Play one bar of quarter note clicks
+    for (let i = 0; i < stepsPerBar; i++) {
+      setTimeout(() => {
+        // Play a hihat for the count-in
+        drumMachineRef.current.playSound("hihat");
+      }, i * quarterNoteTime);
+    }
+    
+    // Return a promise that resolves after the count-in finishes
+    return new Promise((resolve) => {
+      setTimeout(resolve, stepsPerBar * quarterNoteTime);
+    });
+  };
 
-  const togglePlayback = () => {
+  const togglePlayback = async () => {
     if (isPlaying) {
       clearInterval(intervalRef.current);
       setCurrentStep(-1);
@@ -772,6 +808,14 @@ export default function Editor({ id, newTab }) {
       });
       setBarRepeats(resetRepeats);
     } else {
+      // Set to playing state immediately to prevent double-clicks
+      setIsPlaying(true);
+      
+      // Do count-in if enabled
+      if (playbackSettings.countIn) {
+        await playCountIn();
+      }
+
       const quarterNoteTime = (60 * 1000) / bpm;
       const stepTime = quarterNoteTime / SUBDIVISION;
 
@@ -794,6 +838,17 @@ export default function Editor({ id, newTab }) {
 
         // Get the next step, considering repeats
         step = getNextStep(step, totalPatternSteps);
+        
+        // If step is -1, we've reached the end and should stop playback (non-loop mode)
+        if (step === -1) {
+          clearInterval(intervalRef.current);
+          setCurrentStep(-1);
+          if (drumMachineRef.current) {
+            drumMachineRef.current.stop();
+          }
+          setIsPlaying(false);
+          return;
+        }
 
         // Scroll to the bar containing the current step if needed
         const stepsPerBar = timeSignature.numerator * SUBDIVISION;
@@ -809,8 +864,6 @@ export default function Editor({ id, newTab }) {
           }
         }
       }, stepTime);
-
-      setIsPlaying(true);
     }
   };
 
