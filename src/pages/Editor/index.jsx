@@ -416,6 +416,8 @@ export default function Editor({ id, newTab }) {
     // Sort the bars to repeat
     const sortedBars = [...barsToRepeat].sort((a, b) => a - b);
 
+    // Store repetitions as 1 less than displayed, since we count the first playthrough
+    // in the display but in the logic it's treated as a separate event
     setBarRepeats((prev) => ({
       ...prev,
       [barIndex]: {
@@ -489,7 +491,7 @@ export default function Editor({ id, newTab }) {
             {barRepeats[barIndex] && (
               <span
                 className="repeat-indicator"
-                title={`Repeated ${barRepeats[barIndex].repetitions} times`}
+                title={`Plays ${barRepeats[barIndex].repetitions} times`}
               >
                 <PlayIcon /> {barRepeats[barIndex].repetitions}x
               </span>
@@ -745,7 +747,9 @@ export default function Editor({ id, newTab }) {
         }
 
         // If we haven't reached the repetition count, jump to the first bar in the sequence
-        if (barRepeats[currentBarIndex].currentRepetition <= repetitions) {
+        // Now repetitions represents total number of times to play (including first time)
+        // So we jump back until we've played the sequence repetitions times
+        if (barRepeats[currentBarIndex].currentRepetition < repetitions) {
           // Jump to the first bar in the bars-to-repeat sequence
           return bars[0] * stepsPerBar;
         } else {
@@ -1270,11 +1274,11 @@ export default function Editor({ id, newTab }) {
             <div className="modal-content">
               <div className="repeat-form">
                 <div className="form-group">
-                  <label htmlFor="repetitions">Number of Repetitions:</label>
+                  <label htmlFor="repetitions">Total Repetitions:</label>
                   <input
                     id="repetitions"
                     type="number"
-                    min="1"
+                    min="2"
                     max="16"
                     value={repeatModal.repetitions}
                     onChange={(e) =>
@@ -1287,13 +1291,17 @@ export default function Editor({ id, newTab }) {
                       setRepeatModal({
                         ...repeatModal,
                         repetitions: Math.max(
-                          1,
-                          Math.min(16, parseInt(e.target.value) || 1),
+                          2,
+                          Math.min(16, parseInt(e.target.value) || 2),
                         ),
                       });
                     }}
                     className="number-input"
                   />
+                  <p className="help-text">
+                    The total count includes the first playthrough (2x means
+                    play once, then repeat once).
+                  </p>
                 </div>
 
                 <div className="form-group">
