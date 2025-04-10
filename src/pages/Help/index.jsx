@@ -30,7 +30,7 @@ export default function Help() {
         {
           question: "How do I play my beat?",
           answer:
-            "In the editor, click the 'Play' button to start playback. The button will change to 'Stop' which you can click to stop playback. You can also adjust the BPM (beats per minute) using the slider to change the tempo.",
+            "In the editor, click the 'Play' button to start playback. The button will change to 'Stop' which you can click to stop playback. You can also adjust the BPM (beats per minute) to change the tempo. The count-in feature (available in Settings) plays a one-bar metronome click before starting your beat.",
         },
         {
           question: "How do I save my work?",
@@ -50,7 +50,7 @@ export default function Help() {
         {
           question: "What do the different rows represent?",
           answer:
-            "Each row corresponds to a drum sound: kick, snare, hi-hat, tom, and clap (from bottom to top). You can create patterns by activating cells in different rows at different positions.",
+            "Each row corresponds to a different drum sound like kick, snare, hi-hat, tom, etc. The instrument icon at the beginning of each row indicates which sound it controls. You can customize your drum kit in the Settings page.",
         },
         {
           question: "How do I change the time signature or add more bars?",
@@ -58,9 +58,39 @@ export default function Help() {
             "Click 'Show Advanced Controls' to access the time signature settings and bar count controls. You can change the time signature (e.g., 4/4, 3/4) and add more bars to extend your pattern. Note that changing these settings will resize your pattern, but will try to preserve existing beats.",
         },
         {
-          question: "What is 'Note Resolution'?",
+          question: "How do I duplicate or repeat bars?",
           answer:
-            "Note resolution determines how many steps each beat is divided into. 8th notes give you 2 steps per beat, 16th notes give you 4 steps per beat, and 32nd notes give you 8 steps per beat. Higher resolutions allow for more detailed patterns but may be more complex to work with.",
+            "Click on the bar number at the beginning of any bar to open the bar options menu. From there, you can choose to duplicate the bar (which adds a copy right after it) or set up repetitions. When setting repetitions, you can specify how many times to play the bar and which bars to include in the repeat.",
+        },
+        {
+          question: "How do I work with tracks and instruments?",
+          answer:
+            "Click on an instrument icon at the beginning of a row to access track options. You can hide specific tracks, solo a track (hide all others), or show all tracks. This is useful when working with complex patterns to focus on specific instruments.",
+        },
+      ],
+    },
+    {
+      title: "Advanced Features",
+      items: [
+        {
+          question: "What are the playback settings?",
+          answer:
+            "In the Settings page under the Playback section, you can customize how your beats play back. The Count-in setting plays a one-bar metronome click before starting the actual pattern. The Loop Playback setting determines whether your beat will loop continuously or stop after playing through once.",
+        },
+        {
+          question: "How do I customize my drum kit?",
+          answer:
+            "Go to the Settings page and look for the Drum Kit section. Here you can add, remove, and reorder instruments by dragging them. Your customized kit will be used for all new beats you create.",
+        },
+        {
+          question: "Can I create complex patterns with different time signatures?",
+          answer:
+            "Yes! Use the Advanced Controls section in the editor to change the time signature. You can create patterns in common time signatures like 4/4 and 3/4, or experiment with more unusual ones like 5/4 or 7/8.",
+        },
+        {
+          question: "How do hi-hats work in the editor?",
+          answer:
+            "The hi-hat track is special - clicking a cell cycles through three states: off, closed hi-hat, and open hi-hat. This allows you to create more dynamic hi-hat patterns with both closed and open sounds in a single track.",
         },
       ],
     },
@@ -80,7 +110,7 @@ export default function Help() {
         {
           question: "Is my data backed up?",
           answer:
-            "Currently, all beats are stored in your browser's local storage. This means they persist between sessions but are limited to the current browser on your current device. We recommend exporting important beats (feature coming soon) to avoid data loss.",
+            "Your beats are stored in your Supabase account when you're logged in. This means you can access them from any device by logging into your account. Always save your work to ensure it's properly stored in the cloud.",
         },
       ],
     },
@@ -175,10 +205,22 @@ export default function Help() {
       <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
         <h2 className="text-xl font-semibold mb-3">Welcome to Dabber Help</h2>
         <p className="text-gray-700 mb-4">
-          Dabber is a browser-based drum machine that lets you create and save
+          Dabber is a browser-based drum machine that lets you create, customize, and save
           beat patterns. Use the sections below to find answers to common
           questions or report an issue.
         </p>
+        
+        <div className="bg-indigo-50 border border-indigo-100 rounded-md p-4 mb-4">
+          <h3 className="text-md font-medium text-indigo-800 mb-2">Quick Start Guide</h3>
+          <ul className="list-disc list-inside text-indigo-700 space-y-1 text-sm">
+            <li>Click cells in the grid to add drum sounds</li>
+            <li>Use the Play button to hear your beat</li>
+            <li>Click bar numbers to duplicate or repeat bars</li>
+            <li>Click instrument icons to show/hide tracks</li>
+            <li>Check the Settings page for playback options and custom drum kits</li>
+            <li>Save your work with the Save button in the editor</li>
+          </ul>
+        </div>
 
         <div className="flex flex-wrap gap-4 mt-6">
           <a

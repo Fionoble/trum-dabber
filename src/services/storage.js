@@ -109,6 +109,110 @@ export class TabStorage {
       return false;
     }
   }
+  
+  // Get playback settings
+  async getPlaybackSettings() {
+    try {
+      const defaultSettings = {
+        countIn: false,
+        loopPlayback: true
+      };
+      
+      // Return defaults if not logged in
+      if (!isAuthenticated.value) {
+        return defaultSettings;
+      }
+
+      // Try to get user's playback settings from Supabase
+      const { data, error } = await supabase
+        .from(this.settingsTable)
+        .select("settings")
+        .eq("user_id", user.value.id)
+        .eq("key", "playback")
+        .single();
+
+      if (error || !data) {
+        // If no settings found or there was an error, use default
+        console.log("No saved playback settings found, using defaults");
+        // Save the defaults for next time
+        this.savePlaybackSettings(defaultSettings);
+        return defaultSettings;
+      }
+
+      // Return the settings
+      return {
+        ...defaultSettings,
+        ...data.settings
+      };
+    } catch (error) {
+      console.error("Error getting playback settings:", error);
+      // Return defaults on error
+      return {
+        countIn: false,
+        loopPlayback: true
+      };
+    }
+  }
+
+  // Save playback settings
+  async savePlaybackSettings(settings) {
+    try {
+      // Don't save if not logged in
+      if (!isAuthenticated.value) {
+        console.log("User not authenticated, can't save playback settings");
+        return false;
+      }
+
+      // Check if a settings record already exists
+      const { data: existingData, error: checkError } = await supabase
+        .from(this.settingsTable)
+        .select("id")
+        .eq("user_id", user.value.id)
+        .eq("key", "playback")
+        .single();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        // PGRST116 is "No rows returned"
+        console.error("Error checking settings:", checkError);
+        return false;
+      }
+
+      if (existingData) {
+        // Update existing settings
+        const { error } = await supabase
+          .from(this.settingsTable)
+          .update({
+            settings,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingData.id);
+
+        if (error) {
+          console.error("Error updating playback settings:", error);
+          return false;
+        }
+      } else {
+        // Insert new settings
+        const { error } = await supabase.from(this.settingsTable).insert({
+          user_id: user.value.id,
+          key: "playback",
+          settings,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          console.error("Error inserting playback settings:", error);
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Error saving playback settings:", error);
+      return false;
+    }
+  }
 
   // Get all tabs for the current user
   async getTabs() {
