@@ -84,7 +84,7 @@ export default function Editor({ id, newTab }) {
   const sequencerRef = useRef(null);
 
   const location = useLocation();
-  const { route } = location;
+  const { route, history } = location;
 
   useEffect(() => {
     if (isPlaying && drumMachineRef.current) {
@@ -123,6 +123,26 @@ export default function Editor({ id, newTab }) {
     }
   }, [drumSounds]);
 
+  // Function to initialize a new tab with default values
+  const initNewTab = () => {
+    setTabName("New Beat");
+    setTabId(null);
+    setBpm(120);
+    setTimeSignature({ numerator: 4, denominator: 4 });
+    setBars(1);
+    setBarRepeats({}); // Reset repeats
+    setTotalSteps(calculateTotalSteps());
+    setPattern(createEmptyPattern(calculateTotalSteps()));
+    setCurrentStep(-1);
+
+    // Reset any playing state
+    if (isPlaying) {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      drumMachineRef?.current?.stop();
+      setIsPlaying(false);
+    }
+  };
+
   useEffect(async () => {
     const initDrumMachine = async () => {
       drumMachineRef.current = new DrumMachine();
@@ -146,13 +166,7 @@ export default function Editor({ id, newTab }) {
 
     if (newTab) {
       // Handle new tab creation with defaults
-      setTabName("New Beat");
-      setTabId(null);
-      setBpm(120);
-      setTimeSignature({ numerator: 4, denominator: 4 });
-      setBars(1);
-      setTotalSteps(calculateTotalSteps());
-      setPattern(createEmptyPattern(calculateTotalSteps()));
+      initNewTab();
     } else if (id) {
       if (!isLoading.value) {
         if (isAuthenticated.value) {
@@ -186,7 +200,7 @@ export default function Editor({ id, newTab }) {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [isLoading.value, isAuthenticated.value]);
+  }, [isLoading.value, isAuthenticated.value, id, newTab]);
 
   useEffect(() => {
     const newTotalSteps = calculateTotalSteps();
@@ -242,6 +256,11 @@ export default function Editor({ id, newTab }) {
 
         if (tab.measures) {
           setBars(tab.measures);
+        }
+
+        // Load bar repeat configuration if available
+        if (tab.barRepeats) {
+          setBarRepeats(tab.barRepeats);
         }
 
         const steps =
@@ -335,6 +354,131 @@ export default function Editor({ id, newTab }) {
     setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
   };
 
+  // Bar context menu state
+  const [barContextMenu, setBarContextMenu] = useState({
+    visible: false,
+    barIndex: null,
+    x: 0,
+    y: 0,
+  });
+
+  // Bar repeat configuration state
+  const [barRepeats, setBarRepeats] = useState({});
+
+  // Repeat modal state
+  const [repeatModal, setRepeatModal] = useState({
+    visible: false,
+    barIndex: null,
+    repetitions: 1,
+    barsToRepeat: [],
+  });
+
+  // Handle bar number click to show context menu
+  const handleBarNumberClick = (e, barIndex) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const rect = e.currentTarget.getBoundingClientRect();
+
+    setBarContextMenu({
+      visible: true,
+      barIndex,
+      x: rect.right,
+      y: rect.bottom,
+    });
+  };
+
+  // Close bar context menu
+  const closeBarContextMenu = () => {
+    setBarContextMenu({ visible: false, barIndex: null, x: 0, y: 0 });
+  };
+
+  // Open repeat modal
+  const openRepeatModal = (barIndex) => {
+    const currentRepeat = barRepeats[barIndex] || {
+      repetitions: 1,
+      bars: [barIndex],
+    };
+    setRepeatModal({
+      visible: true,
+      barIndex,
+      repetitions: currentRepeat.repetitions,
+      barsToRepeat: [...currentRepeat.bars],
+    });
+    closeBarContextMenu();
+  };
+
+  // Close repeat modal
+  const closeRepeatModal = () => {
+    setRepeatModal({
+      visible: false,
+      barIndex: null,
+      repetitions: 1,
+      barsToRepeat: [],
+    });
+  };
+
+  // Set bar repetition
+  const setBarRepetition = () => {
+    const { barIndex, repetitions, barsToRepeat } = repeatModal;
+
+    if (repetitions < 1 || barsToRepeat.length === 0) {
+      closeRepeatModal();
+      return;
+    }
+
+    // Sort the bars to repeat
+    const sortedBars = [...barsToRepeat].sort((a, b) => a - b);
+
+    // Store repetitions as 1 less than displayed, since we count the first playthrough
+    // in the display but in the logic it's treated as a separate event
+    setBarRepeats((prev) => ({
+      ...prev,
+      [barIndex]: {
+        repetitions,
+        bars: sortedBars,
+      },
+    }));
+
+    closeRepeatModal();
+
+    // If there's a tab ID, save changes
+    if (tabId) saveTab(false); // Silent save
+  };
+
+  // Remove bar repetition
+  const removeBarRepetition = (barIndex) => {
+    setBarRepeats((prev) => {
+      const newRepeats = { ...prev };
+      delete newRepeats[barIndex];
+      return newRepeats;
+    });
+
+    closeBarContextMenu();
+
+    // If there's a tab ID, save changes
+    if (tabId) saveTab(false); // Silent save
+  };
+
+  // Setup click outside listener for bar context menu
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (
+        barContextMenu.visible &&
+        !e.target.closest(".bar-context-menu") &&
+        !e.target.closest(".bar-number")
+      ) {
+        closeBarContextMenu();
+      }
+    };
+
+    document.addEventListener("click", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("click", handleClickOutside);
+    };
+  }, [barContextMenu.visible]);
+
   // Render a bar or bar segment
   const renderBar = (
     barIndex,
@@ -349,22 +493,23 @@ export default function Editor({ id, newTab }) {
     return (
       <div
         key={key}
-        className={`bar-section segment-${segmentIndex} ${isFirstSegment ? "" : "continuation"}`}
+        className={`bar-section segment-${segmentIndex} ${isFirstSegment ? "" : "continuation"} ${barRepeats[barIndex] ? "has-repeat" : ""}`}
       >
-        {/* Only show the bar number on the first segment */}
-        {isFirstSegment && <div className="bar-number">{barIndex + 1}</div>}
-
-        {/* Only show bar actions on the first segment */}
+        {/* Only show the bar number on the first segment, now clickable */}
         {isFirstSegment && (
-          <div className="bar-actions">
-            <button
-              onClick={() => duplicateBar(barIndex)}
-              className="duplicate-bar-btn"
-              title="Duplicate this bar"
-              aria-label="Duplicate bar"
-            >
-              <DuplicateIcon />
-            </button>
+          <div
+            className="bar-number"
+            onClick={(e) => handleBarNumberClick(e, barIndex)}
+          >
+            {barIndex + 1}
+            {barRepeats[barIndex] && (
+              <span
+                className="repeat-indicator"
+                title={`Plays ${barRepeats[barIndex].repetitions} times`}
+              >
+                <PlayIcon /> {barRepeats[barIndex].repetitions}x
+              </span>
+            )}
           </div>
         )}
 
@@ -452,7 +597,6 @@ export default function Editor({ id, newTab }) {
     e.preventDefault();
     e.stopPropagation();
 
-    // Get the position for the context menu
     const rect = e.currentTarget.getBoundingClientRect();
 
     setTrackContextMenu({
@@ -467,7 +611,6 @@ export default function Editor({ id, newTab }) {
     setTrackContextMenu({ visible: false, trackIndex: null, x: 0, y: 0 });
   };
 
-  // Setup click outside listener to close context menu
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -486,12 +629,9 @@ export default function Editor({ id, newTab }) {
     };
   }, [trackContextMenu.visible]);
 
-  // Handlers
-  //
   const handleCellClick = (row, col) => {
     const newPattern = [...pattern];
 
-    // Handle special tracks with multiple states
     if (specialTracks[row]) {
       const currentState = newPattern[row][col];
       const track = specialTracks[row];
@@ -500,18 +640,14 @@ export default function Editor({ id, newTab }) {
       newPattern[row][col] = nextState;
       setPattern(newPattern);
 
-      // Play the appropriate sound when activating a cell
       if (nextState && drumMachineRef.current) {
-        // This will automatically choke other sounds in the same group
         drumMachineRef.current.playSound(nextState);
       }
     } else {
-      // Handle regular tracks (binary on/off)
       const newState = !newPattern[row][col];
       newPattern[row][col] = newState;
       setPattern(newPattern);
 
-      // Play the sound when activating a cell
       if (newState && drumMachineRef.current) {
         drumMachineRef.current.playSound(drumSounds[row]);
       }
@@ -529,10 +665,8 @@ export default function Editor({ id, newTab }) {
     }
   };
 
-  const handleBpmChange = (e) => {
+  const handleBpmBlur = (e) => {
     let newBpm = parseInt(e.target.value);
-
-    // Validate BPM range
     if (isNaN(newBpm)) {
       newBpm = 120;
     } else if (newBpm < 40) {
@@ -592,6 +726,34 @@ export default function Editor({ id, newTab }) {
     if (isPlaying) togglePlayback();
   };
 
+  const getNextStep = (currentStep, totalSteps) => {
+    const stepsPerBar = timeSignature.numerator * SUBDIVISION;
+    const currentBarIndex = Math.floor(currentStep / stepsPerBar);
+
+    if ((currentStep + 1) % stepsPerBar === 0) {
+      const nextBarIndex = currentBarIndex + 1;
+
+      if (barRepeats[currentBarIndex]) {
+        const { repetitions, bars } = barRepeats[currentBarIndex];
+
+        if (!barRepeats[currentBarIndex].currentRepetition) {
+          barRepeats[currentBarIndex].currentRepetition = 1;
+        } else {
+          barRepeats[currentBarIndex].currentRepetition++;
+        }
+
+        if (barRepeats[currentBarIndex].currentRepetition < repetitions) {
+          return bars[0] * stepsPerBar;
+        } else {
+          barRepeats[currentBarIndex].currentRepetition = 0;
+          return nextBarIndex * stepsPerBar;
+        }
+      }
+    }
+
+    return (currentStep + 1) % totalSteps;
+  };
+
   const togglePlayback = () => {
     if (isPlaying) {
       clearInterval(intervalRef.current);
@@ -600,6 +762,15 @@ export default function Editor({ id, newTab }) {
         drumMachineRef.current.stop();
       }
       setIsPlaying(false);
+
+      // Reset all repetition counters
+      const resetRepeats = { ...barRepeats };
+      Object.keys(resetRepeats).forEach((barIdx) => {
+        if (resetRepeats[barIdx]) {
+          resetRepeats[barIdx].currentRepetition = 0;
+        }
+      });
+      setBarRepeats(resetRepeats);
     } else {
       const quarterNoteTime = (60 * 1000) / bpm;
       const stepTime = quarterNoteTime / SUBDIVISION;
@@ -621,10 +792,11 @@ export default function Editor({ id, newTab }) {
           drumMachineRef.current.playStep(visiblePattern, step, drumSounds);
         }
 
-        step = (step + 1) % totalPatternSteps;
+        // Get the next step, considering repeats
+        step = getNextStep(step, totalPatternSteps);
 
         // Scroll to the bar containing the current step if needed
-        const stepsPerBar = timeSignature.numerator * 4;
+        const stepsPerBar = timeSignature.numerator * SUBDIVISION;
         const currentBarIndex = Math.floor(step / stepsPerBar);
 
         // Only scroll on larger screens where bars are arranged vertically
@@ -644,7 +816,6 @@ export default function Editor({ id, newTab }) {
 
   const saveTab = async (showNotification = true) => {
     if (!isAuthenticated.value) {
-      // Redirect to login if not authenticated
       route("/login?redirect=" + encodeURIComponent(location.pathname));
       return;
     }
@@ -664,6 +835,8 @@ export default function Editor({ id, newTab }) {
         measures: bars,
         // Store the current instrument order for future compatibility
         instrumentOrder: [...drumSounds],
+        // Store bar repeats configuration
+        barRepeats: Object.keys(barRepeats).length > 0 ? barRepeats : undefined,
         tracks: pattern.map((patternRow, index) => {
           const sound = drumSounds[index];
           const trackId = `track-${sound}`;
@@ -675,12 +848,10 @@ export default function Editor({ id, newTab }) {
               name: sound,
               sound: sound,
               pattern: patternRow,
-              // Add metadata for special track states
               states: specialTracks[index].states,
             };
           }
 
-          // Regular tracks
           return {
             id: trackId,
             name: sound,
@@ -688,7 +859,6 @@ export default function Editor({ id, newTab }) {
             pattern: patternRow,
           };
         }),
-        // stepsPerMeasure: timeSignature.numerator * SUBDIVISION,
         volume: 0.7,
       };
 
@@ -697,10 +867,9 @@ export default function Editor({ id, newTab }) {
       if (savedId) {
         setTabId(savedId);
 
-        // Update URL if it's a new tab
         if (!tabId) {
-          window.history.replaceState(null, "", `/editor/${savedId}`);
-          route(`/editor/${savedId}`);
+          setTabId(savedId); // Update the component's tabId state
+          history.replaceState(null, "", `/editor/${savedId}`);
         }
 
         if (showNotification) {
@@ -710,8 +879,6 @@ export default function Editor({ id, newTab }) {
       }
     } catch (error) {
       console.error("Error saving tab:", error);
-      // You could add an error state here to show the user
-      // setError("Failed to save beat. Please try again.");
     } finally {
       if (showNotification) {
         setIsSaving(false);
@@ -810,7 +977,8 @@ export default function Editor({ id, newTab }) {
             min="40"
             max="240"
             value={bpm}
-            onChange={handleBpmChange}
+            onChange={(e) => setBpm(e.target.value)}
+            onBlur={handleBpmBlur}
             className="w-16 p-1 border border-gray-300 rounded text-center"
           />
         </div>
@@ -1022,6 +1190,149 @@ export default function Editor({ id, newTab }) {
           <div className="menu-item" onClick={closeContextMenu}>
             <CloseIcon />
             Cancel
+          </div>
+        </div>
+      )}
+
+      {/* Bar Context Menu */}
+      {barContextMenu.visible && (
+        <div
+          className="bar-context-menu"
+          style={{
+            top: `${barContextMenu.y}px`,
+            left: `${barContextMenu.x}px`,
+          }}
+        >
+          <div
+            className="menu-item"
+            onClick={() => {
+              duplicateBar(barContextMenu.barIndex);
+              closeBarContextMenu();
+            }}
+          >
+            <DuplicateIcon />
+            Duplicate Bar
+          </div>
+
+          {barRepeats[barContextMenu.barIndex] ? (
+            <div
+              className="menu-item"
+              onClick={() => removeBarRepetition(barContextMenu.barIndex)}
+            >
+              <MinusIcon />
+              Remove Repeat
+            </div>
+          ) : (
+            <div
+              className="menu-item"
+              onClick={() => openRepeatModal(barContextMenu.barIndex)}
+            >
+              <PlayIcon />
+              Set Repeat
+            </div>
+          )}
+
+          {/* Additional bar actions can be added here */}
+          <div className="divider"></div>
+          <div className="menu-item" onClick={closeBarContextMenu}>
+            <CloseIcon />
+            Cancel
+          </div>
+        </div>
+      )}
+
+      {/* Repeat Modal */}
+      {repeatModal.visible && (
+        <div className="modal-overlay">
+          <div className="repeat-modal">
+            <div className="modal-header">
+              <h3>Repeat Bars</h3>
+              <button className="close-btn" onClick={closeRepeatModal}>
+                <CloseIcon />
+              </button>
+            </div>
+
+            <div className="modal-content">
+              <div className="repeat-form">
+                <div className="form-group">
+                  <label htmlFor="repetitions">Total Repetitions:</label>
+                  <input
+                    id="repetitions"
+                    type="number"
+                    min="2"
+                    max="16"
+                    value={repeatModal.repetitions}
+                    onChange={(e) =>
+                      setRepeatModal({
+                        ...repeatModal,
+                        repetitions: e.target.value,
+                      })
+                    }
+                    onBlur={(e) => {
+                      setRepeatModal({
+                        ...repeatModal,
+                        repetitions: Math.max(
+                          2,
+                          Math.min(16, parseInt(e.target.value) || 2),
+                        ),
+                      });
+                    }}
+                    className="number-input"
+                  />
+                  <p className="help-text">
+                    The total count includes the first playthrough (2x means
+                    play once, then repeat once).
+                  </p>
+                </div>
+
+                <div className="form-group">
+                  <label>Bars to Repeat:</label>
+                  <div className="bar-selection">
+                    {Array(bars)
+                      .fill(0)
+                      .map((_, idx) => (
+                        <button
+                          key={idx}
+                          className={`bar-select-btn ${repeatModal.barsToRepeat.includes(idx) ? "selected" : ""}`}
+                          onClick={() => {
+                            const newBars = repeatModal.barsToRepeat.includes(
+                              idx,
+                            )
+                              ? repeatModal.barsToRepeat.filter(
+                                  (barIdx) => barIdx !== idx,
+                                )
+                              : [...repeatModal.barsToRepeat, idx];
+
+                            setRepeatModal({
+                              ...repeatModal,
+                              barsToRepeat: newBars,
+                            });
+                          }}
+                        >
+                          {idx + 1}
+                        </button>
+                      ))}
+                  </div>
+                  <p className="help-text">
+                    Select the bars you want to repeat. At least one bar must be
+                    selected.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button className="cancel-btn" onClick={closeRepeatModal}>
+                Cancel
+              </button>
+              <button
+                className="apply-btn"
+                onClick={setBarRepetition}
+                disabled={repeatModal.barsToRepeat.length === 0}
+              >
+                Apply
+              </button>
+            </div>
           </div>
         </div>
       )}
