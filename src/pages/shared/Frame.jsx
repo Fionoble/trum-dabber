@@ -35,9 +35,7 @@ export default function Frame({ children }) {
         <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
       </div>
       <div className="flex-1 overflow-auto p-4">{children}</div>
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-gray-800">
-        <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
-      </div>
+      <Sidebar isOpen={false} toggleSidebar={toggleSidebar} />
     </div>
   );
 }

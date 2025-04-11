@@ -15,17 +15,17 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { url, route } = useLocation();
   const [showPopover, setShowPopover] = useState(false);
   const popoverRef = useRef(null);
-  
+
   const handleLogout = async () => {
     await signOut();
     route("/login");
     setShowPopover(false);
   };
-  
+
   const togglePopover = () => {
     setShowPopover(!showPopover);
   };
-  
+
   // Close popover when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -33,10 +33,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         setShowPopover(false);
       }
     };
-    
-    document.addEventListener('mousedown', handleClickOutside);
+
+    document.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
 
@@ -64,8 +64,8 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         </button>
       </div>
 
-      {/* Navigation links */}
-      <nav className="px-2 flex-grow flex flex-row md:flex-col md:mt-5 justify-around md:justify-start">
+      {/* Desktop Navigation links */}
+      <nav className="hidden md:flex px-2 flex-grow flex-col md:mt-5 md:justify-start">
         <NavItem
           href="/editor/new"
           isOpen={isOpen}
@@ -96,7 +96,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         />
       </nav>
 
-      {/* Login/Logout button at the bottom */}
+      {/* Login/Logout button at the bottom (desktop only) */}
       <div className="hidden md:block md:mt-auto border-t border-gray-700 py-3 px-2">
         {isAuthenticated.value ? (
           <button
@@ -132,9 +132,12 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </a>
         )}
       </div>
-      
-      {/* Mobile more menu button - fixed to right side */}
-      <div className="md:hidden fixed bottom-0 right-0 p-2 z-20" ref={popoverRef}>
+
+      {/* Mobile menu button - fixed to right side */}
+      <div
+        className="fixed bottom-0 right-0 p-2 z-20 md:hidden"
+        ref={popoverRef}
+      >
         {/* More button */}
         <button
           onClick={togglePopover}
@@ -143,24 +146,61 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         >
           <MoreIcon className="w-6 h-6" />
         </button>
-        
+
         {/* Popover menu */}
         {showPopover && (
-          <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-700 rounded-md shadow-lg overflow-hidden z-10">
+          <div className="absolute bottom-full right-0 mb-2 w-64 bg-gray-700 rounded-md shadow-lg overflow-hidden z-10">
+            <a
+              href="/editor/new"
+              onClick={() => setShowPopover(false)}
+              className={`block w-full text-left px-4 py-3 text-sm hover:bg-gray-600 focus:outline-none flex items-center ${url.includes("/editor/new") ? "bg-indigo-500 text-white" : "text-gray-200"}`}
+            >
+              <EditorIcon className="mr-3 w-5 h-5" />
+              New Dab
+            </a>
+            <a
+              href="/"
+              onClick={() => setShowPopover(false)}
+              className={`block w-full text-left px-4 py-3 text-sm hover:bg-gray-600 focus:outline-none flex items-center ${url === "/" || url === "" ? "bg-indigo-500 text-white" : "text-gray-200"}`}
+            >
+              <TabListIcon className="mr-3 w-5 h-5" />
+              Tab List
+            </a>
+            <a
+              href="/settings"
+              onClick={() => setShowPopover(false)}
+              className={`block w-full text-left px-4 py-3 text-sm hover:bg-gray-600 focus:outline-none flex items-center ${url.includes("/settings") ? "bg-indigo-500 text-white" : "text-gray-200"}`}
+            >
+              <SettingsIcon className="mr-3 w-5 h-5" />
+              Settings
+            </a>
+            <a
+              href="/help"
+              onClick={() => setShowPopover(false)}
+              className={`block w-full text-left px-4 py-3 text-sm hover:bg-gray-600 focus:outline-none flex items-center ${url.includes("/help") ? "bg-indigo-500 text-white" : "text-gray-200"}`}
+            >
+              <HelpIcon className="mr-3 w-5 h-5" />
+              Help
+            </a>
+
+            {/* Divider */}
+            <div className="border-t border-gray-600 my-1"></div>
+
+            {/* Login/Logout */}
             {isAuthenticated.value ? (
               <button
                 onClick={handleLogout}
-                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600 focus:outline-none flex items-center"
+                className="w-full text-left px-4 py-3 text-sm text-red-400 hover:bg-gray-600 focus:outline-none flex items-center"
               >
-                <LogoutIcon className="mr-2 w-4 h-4" />
+                <LogoutIcon className="mr-3 w-5 h-5" />
                 Logout
               </button>
             ) : (
               <a
                 href="/login"
-                className="block w-full text-left px-4 py-2 text-sm text-green-400 hover:bg-gray-600 focus:outline-none flex items-center"
+                className="block w-full text-left px-4 py-3 text-sm text-green-400 hover:bg-gray-600 focus:outline-none flex items-center"
               >
-                <LoginIcon className="mr-2 w-4 h-4" />
+                <LoginIcon className="mr-3 w-5 h-5" />
                 Login
               </a>
             )}
@@ -172,10 +212,18 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
 };
 
 // Navigation Item Component with active state
-const NavItem = ({ href, icon, label, isOpen, isActive, onClick, customClass }) => {
-  const Component = href ? 'a' : 'button';
+const NavItem = ({
+  href,
+  icon,
+  label,
+  isOpen,
+  isActive,
+  onClick,
+  customClass,
+}) => {
+  const Component = href ? "a" : "button";
   const props = href ? { href } : { onClick };
-  
+
   return (
     <Component
       {...props}
@@ -184,7 +232,7 @@ const NavItem = ({ href, icon, label, isOpen, isActive, onClick, customClass }) 
         ${
           isActive
             ? "bg-indigo-500 text-white"
-            : `text-gray-300 hover:bg-gray-700 hover:text-white ${customClass || ''}`
+            : `text-gray-300 hover:bg-gray-700 hover:text-white ${customClass || ""}`
         }
         active:transform active:translate-y-0.5 active:bg-opacity-90 active:shadow-inner`}
     >
