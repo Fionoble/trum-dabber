@@ -30,9 +30,12 @@ export default function Frame({ children }) {
   }
 
   return (
-    <div className="flex h-screen w-full overflow-hidden">
-      <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
+    <div className="flex flex-col h-screen w-full overflow-hidden md:flex-row">
+      <div className="hidden md:block">
+        <Sidebar isOpen={isOpen} toggleSidebar={toggleSidebar} />
+      </div>
       <div className="flex-1 overflow-auto p-4">{children}</div>
+      <Sidebar isOpen={false} toggleSidebar={toggleSidebar} />
     </div>
   );
 }
