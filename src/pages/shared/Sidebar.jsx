@@ -21,10 +21,10 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
     <div
       className={`bg-gray-800 text-white ${
         isOpen ? "w-64" : "w-16"
-      } h-full flex-shrink-0 transition-all duration-300 ease-in-out flex flex-col`}
+      } md:h-full flex-shrink-0 transition-all duration-300 ease-in-out flex flex-row md:flex-col`}
     >
-      {/* Sidebar header */}
-      <div className="flex items-center justify-between px-4 py-3 h-16 border-b border-gray-700">
+      {/* Sidebar header - only shown on desktop */}
+      <div className="hidden md:flex items-center justify-between px-4 py-3 h-16 border-b border-gray-700">
         <h2
           className={`text-xl font-semibold transition-opacity duration-300 ${
             isOpen ? "opacity-100" : "opacity-0 hidden"
@@ -42,7 +42,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </div>
 
       {/* Navigation links */}
-      <nav className="mt-5 px-2 flex-grow">
+      <nav className="px-2 flex-grow flex flex-row md:flex-col md:mt-5 justify-around md:justify-start">
         <NavItem
           href="/editor/new"
           isOpen={isOpen}
@@ -74,7 +74,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
       </nav>
 
       {/* Login/Logout button at the bottom */}
-      <div className="mt-auto border-t border-gray-700 py-3 px-2">
+      <div className="hidden md:block md:mt-auto border-t border-gray-700 py-3 px-2">
         {isAuthenticated.value ? (
           <button
             onClick={handleLogout}
@@ -109,21 +109,47 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           </a>
         )}
       </div>
+      
+      {/* Mobile Login/Logout button */}
+      <div className="md:hidden px-2">
+        {isAuthenticated.value ? (
+          <NavItem
+            icon={<LogoutIcon />}
+            label="Logout"
+            isOpen={isOpen}
+            isActive={false}
+            onClick={handleLogout}
+            customClass="text-red-400"
+          />
+        ) : (
+          <NavItem
+            href="/login"
+            icon={<LoginIcon />}
+            label="Login"
+            isOpen={isOpen}
+            isActive={false}
+            customClass="text-green-400"
+          />
+        )}
+      </div>
     </div>
   );
 };
 
 // Navigation Item Component with active state
-const NavItem = ({ href, icon, label, isOpen, isActive }) => {
+const NavItem = ({ href, icon, label, isOpen, isActive, onClick, customClass }) => {
+  const Component = href ? 'a' : 'button';
+  const props = href ? { href } : { onClick };
+  
   return (
-    <a
-      href={href}
+    <Component
+      {...props}
       className={`group flex items-center px-2 py-3 text-base font-medium rounded-md transition-all duration-200
         ${!isOpen ? "justify-center" : ""}
         ${
           isActive
             ? "bg-indigo-500 text-white"
-            : "text-gray-300 hover:bg-gray-700 hover:text-white"
+            : `text-gray-300 hover:bg-gray-700 hover:text-white ${customClass || ''}`
         }
         active:transform active:translate-y-0.5 active:bg-opacity-90 active:shadow-inner`}
     >
@@ -135,7 +161,7 @@ const NavItem = ({ href, icon, label, isOpen, isActive }) => {
       {isOpen && (
         <span className="transition-opacity duration-300">{label}</span>
       )}
-    </a>
+    </Component>
   );
 };
 
