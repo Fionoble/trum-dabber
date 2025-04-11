@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Trum Dabber - Drum Tab Creator</title>
+    <link rel="icon" type="image/svg+xml" href=".images/favicon.svg" />
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+    <style>
+      .gradient-bg {
+        background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+      }
+      .feature-card {
+        transition:
+          transform 0.3s ease,
+          box-shadow 0.3s ease;
+      }
+      .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow:
+          0 10px 25px -5px rgba(0, 0, 0, 0.1),
+          0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      }
+      .drum-grid {
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        gap: 4px;
+        margin: 20px 0;
+      }
+      .drum-cell {
+        width: 100%;
+        padding-top: 100%;
+        position: relative;
+        border-radius: 4px;
+      }
+      .drum-cell.active {
+        background-color: #4f46e5;
+      }
+      .drum-cell.inactive {
+        background-color: #e5e7eb;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-50 font-sans">
+    <!-- Hero Section -->
+    <header class="gradient-bg text-white py-12 md:py-20">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row items-center justify-between">
+          <div class="md:w-1/2 mb-8 md:mb-0">
+            <h1 class="text-4xl md:text-5xl font-bold mb-4">Trum Dabber</h1>
+            <p class="text-xl md:text-2xl mb-6">
+              Create, Play, and Share Drum Tabs with Ease
+            </p>
+            <p class="text-lg mb-8">
+              A modern web application for drummers to create, organize, and
+              share drum tabs using an intuitive interface.
+            </p>
+            <div
+              class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4"
+            >
+              <a
+                href="https://dt.fio.dev"
+                class="bg-white text-indigo-600 px-6 py-3 rounded-lg font-medium text-center hover:bg-gray-100 transition"
+                >Launch App</a
+              >
+            </div>
+          </div>
+          <div class="md:w-1/2">
+            <div class="bg-white p-4 rounded-lg shadow-lg">
+              <div class="drum-grid">
+                <!-- Sample drum grid visualization -->
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell active"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+                <div class="drum-cell inactive"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Features Section -->
+    <section class="py-16 bg-white">
+      <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">Features</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <!-- Feature 1 -->
+          <div class="feature-card bg-gray-50 p-6 rounded-lg shadow">
+            <div
+              class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-indigo-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Intuitive Editor</h3>
+            <p class="text-gray-600">
+              Create drum tabs using our easy-to-use grid editor with real-time
+              audio playback to hear your composition.
+            </p>
+          </div>
+
+          <!-- Feature 2 -->
+          <div class="feature-card bg-gray-50 p-6 rounded-lg shadow">
+            <div
+              class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-indigo-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Save & Organize</h3>
+            <p class="text-gray-600">
+              Store your drum tabs in the cloud, organize them into collections,
+              and access them from any device.
+            </p>
+          </div>
+
+          <!-- Feature 3 -->
+          <div class="feature-card bg-gray-50 p-6 rounded-lg shadow">
+            <div
+              class="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mb-4"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-6 w-6 text-indigo-600"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"
+                />
+              </svg>
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Share & Collaborate</h3>
+            <p class="text-gray-600">
+              Share your drum tabs with friends or collaborate with other
+              drummers to perfect your compositions.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works Section -->
+    <section class="py-16 bg-gray-50">
+      <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">How It Works</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
+          <!-- Step 1 -->
+          <div>
+            <div
+              class="bg-indigo-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold"
+            >
+              1
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Create Your Account</h3>
+            <p class="text-gray-600">
+              Sign up for free and get instant access to all features.
+            </p>
+          </div>
+
+          <!-- Step 2 -->
+          <div>
+            <div
+              class="bg-indigo-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold"
+            >
+              2
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Design Your Tab</h3>
+            <p class="text-gray-600">
+              Use our intuitive editor to create your drum tab with various
+              instruments.
+            </p>
+          </div>
+
+          <!-- Step 3 -->
+          <div>
+            <div
+              class="bg-indigo-600 w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4 text-white font-bold"
+            >
+              3
+            </div>
+            <h3 class="text-xl font-semibold mb-2">Play & Share</h3>
+            <p class="text-gray-600">
+              Listen to your creation and share it with friends or the
+              community.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech Stack Section -->
+    <section class="py-16 bg-white">
+      <div class="container mx-auto px-4">
+        <h2 class="text-3xl font-bold text-center mb-12">Built With</h2>
+
+        <div class="flex flex-wrap justify-center items-center gap-8">
+          <div class="text-center">
+            <img
+              src="./images/preact.svg"
+              alt="Preact"
+              class="h-12 mx-auto mb-2"
+            />
+            <p class="text-gray-600">Preact</p>
+          </div>
+          <div class="text-center">
+            <img
+              src="./images/tailwindcss.svg"
+              alt="Tailwind CSS"
+              class="h-12 mx-auto mb-2"
+            />
+            <p class="text-gray-600">Tailwind CSS</p>
+          </div>
+          <div class="text-center">
+            <img
+              src="./images/supabase.svg"
+              alt="Supabase"
+              class="h-12 mx-auto mb-2"
+            />
+            <p class="text-gray-600">Supabase</p>
+          </div>
+          <div class="text-center">
+            <img src="./images/vite.svg" alt="Vite" class="h-12 mx-auto mb-2" />
+            <p class="text-gray-600">Vite</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="gradient-bg text-white py-16">
+      <div class="container mx-auto px-4 text-center">
+        <h2 class="text-3xl font-bold mb-6">Ready to Create Your Drum Tab?</h2>
+        <p class="text-xl mb-8 max-w-2xl mx-auto">
+          Join tens of drummers who are already using Trum Dabber to create,
+          organize, and share their drum tabs.
+        </p>
+        <a
+          href="https://trum-dabber.netlify.app"
+          class="bg-white text-indigo-600 px-8 py-3 rounded-lg font-medium inline-block hover:bg-gray-100 transition"
+          >Get Started for Free</a
+        >
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 text-white py-8">
+      <div class="container mx-auto px-4">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+          <div class="mb-4 md:mb-0">
+            <h3 class="text-xl font-bold">Trum Dabber</h3>
+            <p class="text-gray-400">Create, Play, and Share Drum Tabs</p>
+          </div>
+          <div class="flex space-x-4">
+            <a
+              href="https://dt.fio.dev"
+              class="hover:text-indigo-400 transition"
+              >Launch App</a
+            >
+          </div>
+        </div>
+        <div
+          class="border-t border-gray-700 mt-6 pt-6 text-center text-gray-400"
+        >
+          <p>&copy; 2023-2025 Trum Dabber. All rights reserved.</p>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
