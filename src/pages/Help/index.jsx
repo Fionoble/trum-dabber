@@ -13,9 +13,12 @@ export default function Help() {
     issueType: "bug",
     description: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
-  const [submitError, setSubmitError] = useState(null);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSubmitSuccess(true);
+  };
 
   // FAQ data organized in sections
   const faqSections = [
@@ -83,7 +86,8 @@ export default function Help() {
             "Go to the Settings page and look for the Drum Kit section. Here you can add, remove, and reorder instruments by dragging them. Your customized kit will be used for all new beats you create.",
         },
         {
-          question: "Can I create complex patterns with different time signatures?",
+          question:
+            "Can I create complex patterns with different time signatures?",
           answer:
             "Yes! Use the Advanced Controls section in the editor to change the time signature. You can create patterns in common time signatures like 4/4 and 3/4, or experiment with more unusual ones like 5/4 or 7/8.",
         },
@@ -137,55 +141,6 @@ export default function Help() {
     },
   ];
 
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  // Handle form submission
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      // Mock API call - in a real app, replace with your actual API endpoint
-      // await fetch('https://api.yourdomain.com/issues', {
-      //   method: 'POST',
-      //   headers: { 'Content-Type': 'application/json' },
-      //   body: JSON.stringify(formData)
-      // });
-
-      // Simulate API delay
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Show success message
-      setSubmitSuccess(true);
-
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        issueType: "bug",
-        description: "",
-      });
-
-      // Hide success message after 5 seconds
-      setTimeout(() => {
-        setSubmitSuccess(false);
-      }, 5000);
-    } catch (error) {
-      console.error("Error submitting issue:", error);
-      setSubmitError("Failed to submit your issue. Please try again later.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Toggle FAQ item
   const [expandedItems, setExpandedItems] = useState({});
 
@@ -205,19 +160,23 @@ export default function Help() {
       <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
         <h2 className="text-xl font-semibold mb-3">Welcome to Dabber Help</h2>
         <p className="text-gray-700 mb-4">
-          Dabber is a browser-based drum machine that lets you create, customize, and save
-          beat patterns. Use the sections below to find answers to common
-          questions or report an issue.
+          Dabber is a browser-based drum machine that lets you create,
+          customize, and save beat patterns. Use the sections below to find
+          answers to common questions or report an issue.
         </p>
-        
+
         <div className="bg-indigo-50 border border-indigo-100 rounded-md p-4 mb-4">
-          <h3 className="text-md font-medium text-indigo-800 mb-2">Quick Start Guide</h3>
+          <h3 className="text-md font-medium text-indigo-800 mb-2">
+            Quick Start Guide
+          </h3>
           <ul className="list-disc list-inside text-indigo-700 space-y-1 text-sm">
             <li>Click cells in the grid to add drum sounds</li>
             <li>Use the Play button to hear your beat</li>
             <li>Click bar numbers to duplicate or repeat bars</li>
             <li>Click instrument icons to show/hide tracks</li>
-            <li>Check the Settings page for playback options and custom drum kits</li>
+            <li>
+              Check the Settings page for playback options and custom drum kits
+            </li>
             <li>Save your work with the Save button in the editor</li>
           </ul>
         </div>
@@ -271,7 +230,9 @@ export default function Help() {
                       aria-expanded={isExpanded}
                     >
                       <span className="font-medium">{item.question}</span>
-                      <span className={`transform transition-transform ${isExpanded ? "rotate-180" : ""} inline-block`}>
+                      <span
+                        className={`transform transition-transform ${isExpanded ? "rotate-180" : ""} inline-block`}
+                      >
                         <ChevronDown2Icon />
                       </span>
                     </button>
@@ -320,7 +281,7 @@ export default function Help() {
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" netlify>
             {submitError && (
               <div className="error-message bg-red-100 text-red-700 p-4 rounded-md">
                 {submitError}
@@ -339,8 +300,6 @@ export default function Help() {
                   type="text"
                   id="name"
                   name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   required
                 />
@@ -357,8 +316,6 @@ export default function Help() {
                   type="email"
                   id="email"
                   name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                   required
                 />
@@ -375,8 +332,6 @@ export default function Help() {
               <select
                 id="issueType"
                 name="issueType"
-                value={formData.issueType}
-                onChange={handleInputChange}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
               >
                 <option value="bug">Bug Report</option>
@@ -396,8 +351,6 @@ export default function Help() {
               <textarea
                 id="description"
                 name="description"
-                value={formData.description}
-                onChange={handleInputChange}
                 rows="5"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                 placeholder="Please describe the issue in detail. For bugs, include steps to reproduce, what happened, and what you expected to happen."
@@ -408,19 +361,9 @@ export default function Help() {
             <div className="flex items-center">
               <button
                 type="submit"
-                disabled={isSubmitting}
                 className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 flex items-center"
               >
-                {isSubmitting ? (
-                  <>
-                    <span className="text-white -ml-1 mr-2">
-                      <SpinnerIcon />
-                    </span>
-                    Submitting...
-                  </>
-                ) : (
-                  "Submit Report"
-                )}
+                Submit Report
               </button>
               <p className="text-xs text-gray-500 ml-4">
                 We typically respond within 1-2 business days.
