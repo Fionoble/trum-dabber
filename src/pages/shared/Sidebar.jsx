@@ -1,4 +1,5 @@
 import { useLocation } from "preact-iso";
+import { useState, useEffect, useRef } from "preact/hooks";
 import { isAuthenticated, signOut } from "../../services/auth";
 
 import MenuIcon from "../../assets/icons/Menu.svg";
@@ -8,14 +9,36 @@ import EditorIcon from "../../assets/icons/Editor.svg";
 import TabListIcon from "../../assets/icons/TabList.svg";
 import SettingsIcon from "../../assets/icons/Settings.svg";
 import HelpIcon from "../../assets/icons/Help.svg";
+import MoreIcon from "../../assets/icons/Menu.svg";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { url, route } = useLocation();
-
+  const [showPopover, setShowPopover] = useState(false);
+  const popoverRef = useRef(null);
+  
   const handleLogout = async () => {
     await signOut();
     route("/login");
+    setShowPopover(false);
   };
+  
+  const togglePopover = () => {
+    setShowPopover(!showPopover);
+  };
+  
+  // Close popover when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (popoverRef.current && !popoverRef.current.contains(event.target)) {
+        setShowPopover(false);
+      }
+    };
+    
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   return (
     <div
@@ -110,26 +133,38 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
         )}
       </div>
       
-      {/* Mobile Login/Logout button */}
-      <div className="md:hidden px-2">
-        {isAuthenticated.value ? (
-          <NavItem
-            icon={<LogoutIcon />}
-            label="Logout"
-            isOpen={isOpen}
-            isActive={false}
-            onClick={handleLogout}
-            customClass="text-red-400"
-          />
-        ) : (
-          <NavItem
-            href="/login"
-            icon={<LoginIcon />}
-            label="Login"
-            isOpen={isOpen}
-            isActive={false}
-            customClass="text-green-400"
-          />
+      {/* Mobile more menu button - fixed to right side */}
+      <div className="md:hidden fixed bottom-0 right-0 p-2 z-20" ref={popoverRef}>
+        {/* More button */}
+        <button
+          onClick={togglePopover}
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg focus:outline-none hover:bg-indigo-700 active:bg-indigo-800"
+          aria-label="More options"
+        >
+          <MoreIcon className="w-6 h-6" />
+        </button>
+        
+        {/* Popover menu */}
+        {showPopover && (
+          <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-700 rounded-md shadow-lg overflow-hidden z-10">
+            {isAuthenticated.value ? (
+              <button
+                onClick={handleLogout}
+                className="w-full text-left px-4 py-2 text-sm text-red-400 hover:bg-gray-600 focus:outline-none flex items-center"
+              >
+                <LogoutIcon className="mr-2 w-4 h-4" />
+                Logout
+              </button>
+            ) : (
+              <a
+                href="/login"
+                className="block w-full text-left px-4 py-2 text-sm text-green-400 hover:bg-gray-600 focus:outline-none flex items-center"
+              >
+                <LoginIcon className="mr-2 w-4 h-4" />
+                Login
+              </a>
+            )}
+          </div>
         )}
       </div>
     </div>
