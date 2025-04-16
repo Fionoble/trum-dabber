@@ -952,7 +952,7 @@ export default function Editor({ id, newTab }) {
     <div className="editor-container p-4">
       {/* Header with title input and save button */}
       <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center relative">
+        <div className="flex items-center relative grow max-w-[calc(100%-80px)] sm:max-w-[calc(100%-100px)]">
           <input
             ref={nameInputRef}
             type="text"
@@ -960,7 +960,7 @@ export default function Editor({ id, newTab }) {
             onChange={handleNameChange}
             onFocus={() => setIsNameFocused(true)}
             onBlur={handleNameBlur}
-            className={`text-2xl font-bold bg-transparent border-b-2 transition-colors px-2 py-1 min-w-[200px] focus:outline-none ${
+            className={`text-xl sm:text-2xl font-bold bg-transparent border-b-2 transition-colors px-2 py-1 w-full focus:outline-none truncate ${
               isNameFocused ? "border-indigo-500" : "border-gray-300"
             }`}
             placeholder="Untitled Beat"
@@ -972,28 +972,28 @@ export default function Editor({ id, newTab }) {
           )}
         </div>
 
-        <div className="flex items-center">
+        <div className="flex items-center shrink-0 ml-2">
           {saveSuccess && (
-            <span className="text-green-500 mr-3 animate-fade-out">
+            <span className="text-green-500 mr-3 animate-fade-out hidden sm:inline">
               Saved successfully!
             </span>
           )}
           <button
             onClick={() => saveTab(true)}
             disabled={isSaving || !isLoaded}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50"
+            className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
           >
             {isSaving ? (
               <>
                 <span className="text-white">
                   <SpinnerIcon />
                 </span>
-                Saving...
+                <span className="sm:inline">Saving...</span>
               </>
             ) : (
               <>
                 <SaveIcon />
-                Save
+                <span>Save</span>
               </>
             )}
           </button>
@@ -1001,7 +1001,7 @@ export default function Editor({ id, newTab }) {
       </div>
 
       {/* Basic Controls */}
-      <div className="controls flex flex-wrap items-center mb-4 gap-4 p-4 bg-gray-50 rounded-lg">
+      <div className="controls flex flex-wrap items-center mb-4 gap-y-3 gap-x-4 p-4 bg-gray-50 rounded-lg">
         <button
           onClick={togglePlayback}
           disabled={!isLoaded}
@@ -1061,7 +1061,7 @@ export default function Editor({ id, newTab }) {
 
         <button
           onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-          className="ml-auto text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm"
+          className="text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm md:ml-auto w-full md:w-auto"
         >
           {showAdvancedControls ? "Hide" : "Show"} Advanced Controls
           <span
