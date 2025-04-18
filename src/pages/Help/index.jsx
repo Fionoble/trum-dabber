@@ -7,12 +7,12 @@ import ChevronDown2Icon from "../../assets/icons/ChevronDown2.svg.jsx";
 import "./styles.scss";
 
 export default function Help() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    issueType: "bug",
-    description: "",
-  });
+  // const [formData, setFormData] = useState({
+  //   name: "",
+  //   email: "",
+  //   issueType: "bug",
+  //   description: "",
+  // });
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const handleSubmit = async (event) => {
@@ -282,12 +282,6 @@ export default function Help() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4" netlify>
-            {submitError && (
-              <div className="error-message bg-red-100 text-red-700 p-4 rounded-md">
-                {submitError}
-              </div>
-            )}
-
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label
