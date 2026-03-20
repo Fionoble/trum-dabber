@@ -2,14 +2,13 @@ import { useLocation } from "preact-iso";
 import { useState, useEffect, useRef } from "preact/hooks";
 import { isAuthenticated, signOut } from "../../services/auth";
 
-import MenuIcon from "../../assets/icons/Menu.svg";
-import LogoutIcon from "../../assets/icons/Logout.svg";
-import LoginIcon from "../../assets/icons/Login.svg";
-import EditorIcon from "../../assets/icons/Editor.svg";
-import TabListIcon from "../../assets/icons/TabList.svg";
-import SettingsIcon from "../../assets/icons/Settings.svg";
-import HelpIcon from "../../assets/icons/Help.svg";
-import MoreIcon from "../../assets/icons/Menu.svg";
+import MenuIcon from "../../assets/icons/Menu.svg.jsx";
+import LogoutIcon from "../../assets/icons/Logout.svg.jsx";
+import LoginIcon from "../../assets/icons/Login.svg.jsx";
+import EditorIcon from "../../assets/icons/Editor.svg.jsx";
+import TabListIcon from "../../assets/icons/TabList.svg.jsx";
+import SettingsIcon from "../../assets/icons/Settings.svg.jsx";
+import HelpIcon from "../../assets/icons/Help.svg.jsx";
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const { url, route } = useLocation();
@@ -144,7 +143,7 @@ const Sidebar = ({ isOpen, toggleSidebar }) => {
           className="w-12 h-12 flex items-center justify-center rounded-full bg-indigo-600 text-white shadow-lg focus:outline-none hover:bg-indigo-700 active:bg-indigo-800"
           aria-label="More options"
         >
-          <MoreIcon className="w-6 h-6" />
+          <MenuIcon className="w-6 h-6" />
         </button>
 
         {/* Popover menu */}

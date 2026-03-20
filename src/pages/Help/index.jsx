@@ -1,7 +1,6 @@
 import { useState } from "preact/hooks";
 import QuestionMarkIcon from "../../assets/icons/QuestionMark.svg.jsx";
 import AlertIcon from "../../assets/icons/AlertIcon.svg.jsx";
-import SpinnerIcon from "../../assets/icons/Spinner.svg.jsx";
 import SuccessIcon from "../../assets/icons/Success.svg.jsx";
 import ChevronDown2Icon from "../../assets/icons/ChevronDown2.svg.jsx";
 import "./styles.scss";

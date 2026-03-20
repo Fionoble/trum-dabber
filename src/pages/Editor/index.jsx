@@ -21,7 +21,6 @@ import InstrumentIcons from "../../assets/icons/instruments";
 
 const MAX_BAR_COUNT = 25;
 const SUBDIVISION = 8;
-const CELLS_PER_ROW = 8; // Default number of cells per row
 const defaultDrumSounds = [
   "hihat",
   "hiTom",
@@ -72,12 +71,7 @@ export default function Editor({ id, newTab }) {
 
   const createEmptyPattern = (steps) => {
     const validSteps = Math.max(1, Math.floor(Number(steps) || 1));
-    return drumSounds.map((_, index) => {
-      if (specialTracks[index]) {
-        return Array(validSteps).fill(false);
-      }
-      return Array(validSteps).fill(false);
-    });
+    return drumSounds.map(() => Array(validSteps).fill(false));
   };
 
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
@@ -253,7 +247,6 @@ export default function Editor({ id, newTab }) {
   const loadTab = async (tabId) => {
     try {
       const tab = await tabStorage.getTab(tabId);
-      console.log(tab);
       if (tab) {
         setTabId(tab.id);
         setTabName(tab.name);
@@ -735,6 +728,8 @@ export default function Editor({ id, newTab }) {
     if (isPlaying) togglePlayback();
   };
 
+  const repeatCountRef = useRef({});
+
   const getNextStep = (currentStep, totalSteps) => {
     const stepsPerBar = timeSignature.numerator * SUBDIVISION;
     const currentBarIndex = Math.floor(currentStep / stepsPerBar);
@@ -744,26 +739,25 @@ export default function Editor({ id, newTab }) {
 
       if (barRepeats[currentBarIndex]) {
         const { repetitions, bars } = barRepeats[currentBarIndex];
+        const counts = repeatCountRef.current;
 
-        if (!barRepeats[currentBarIndex].currentRepetition) {
-          barRepeats[currentBarIndex].currentRepetition = 1;
+        if (!counts[currentBarIndex]) {
+          counts[currentBarIndex] = 1;
         } else {
-          barRepeats[currentBarIndex].currentRepetition++;
+          counts[currentBarIndex]++;
         }
 
-        if (barRepeats[currentBarIndex].currentRepetition < repetitions) {
+        if (counts[currentBarIndex] < repetitions) {
           return bars[0] * stepsPerBar;
         } else {
-          barRepeats[currentBarIndex].currentRepetition = 0;
+          counts[currentBarIndex] = 0;
           return nextBarIndex * stepsPerBar;
         }
       }
     }
 
-    // If we've reached the end of the pattern and loop playback is enabled, loop back to start
-    // Otherwise, go to the next step normally (which will loop anyway due to the modulo)
     if (currentStep + 1 >= totalSteps) {
-      return playbackSettings.loopPlayback ? 0 : -1; // Return -1 to signal end of playback when not looping
+      return playbackSettings.loopPlayback ? 0 : -1;
     }
 
     return (currentStep + 1) % totalSteps;
@@ -1141,25 +1135,13 @@ export default function Editor({ id, newTab }) {
             {Array(bars)
               .fill(0)
               .map((_, barIndex) => {
-                // Calculate step range for this bar
                 const stepsPerBar = timeSignature.numerator * SUBDIVISION;
                 const startStep = barIndex * stepsPerBar;
                 const endStep = startStep + stepsPerBar;
 
-                console.log(
-                  `Bar ${barIndex + 1}: stepsPerBar=${stepsPerBar}, cellsPerRow=${CELLS_PER_ROW}`,
-                );
-
-                // FORCE TESTING: For testing purposes, always split the bar if it has more than 8 steps
-                // Remove this for production and use the calculation below
                 if (stepsPerBar > 8) {
-                  // Force 8 cells per segment for testing
-                  const forcedSegments = Math.ceil(stepsPerBar / 8);
-                  console.log(
-                    `Forcing ${forcedSegments} segments for bar ${barIndex + 1}`,
-                  );
-
-                  return Array(forcedSegments)
+                  const segments = Math.ceil(stepsPerBar / 8);
+                  return Array(segments)
                     .fill(0)
                     .map((_, segmentIndex) => {
                       const segmentStart = startStep + segmentIndex * 8;
@@ -1167,11 +1149,6 @@ export default function Editor({ id, newTab }) {
                         startStep + (segmentIndex + 1) * 8,
                         endStep,
                       );
-
-                      console.log(
-                        `Bar ${barIndex + 1} Segment ${segmentIndex}: ${segmentStart} - ${segmentEnd}`,
-                      );
-
                       return renderBar(
                         barIndex,
                         segmentStart,
@@ -1182,7 +1159,6 @@ export default function Editor({ id, newTab }) {
                     });
                 }
 
-                // Fallback - render the entire bar
                 return renderBar(barIndex, startStep, endStep, 0, stepsPerBar);
               })}
           </div>

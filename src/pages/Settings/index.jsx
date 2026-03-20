@@ -268,26 +268,6 @@ export default function Settings() {
     setInstruments(updatedInstruments);
   };
 
-  const handleMoveInstrument = (index, direction) => {
-    if (
-      (direction === "up" && index === 0) ||
-      (direction === "down" && index === instruments.length - 1)
-    ) {
-      return; // Can't move first item up or last item down
-    }
-
-    const updatedInstruments = [...instruments];
-    const newIndex = direction === "up" ? index - 1 : index + 1;
-
-    // Swap positions
-    [updatedInstruments[index], updatedInstruments[newIndex]] = [
-      updatedInstruments[newIndex],
-      updatedInstruments[index],
-    ];
-
-    setInstruments(updatedInstruments);
-  };
-  
   // Handler for when drag ends - update the instruments array
   const handleDragEnd = (event) => {
     const { active, over } = event;

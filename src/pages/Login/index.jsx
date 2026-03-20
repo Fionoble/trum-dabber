@@ -4,10 +4,8 @@ import {
   signInWithGoogle,
   resetPassword,
   authError,
-  isAuthenticated,
 } from "../../services/auth";
 import { useLocation } from "preact-iso";
-import { useSignal } from "@preact/signals";
 import SpinnerIcon from "../../assets/icons/Spinner.svg.jsx";
 import LockIcon from "../../assets/icons/Lock.svg.jsx";
 import GoogleIcon from "../../assets/icons/Google.svg.jsx";
@@ -19,7 +17,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [resetMode, setResetMode] = useState(false);
-  const resetSuccess = useSignal(false);
+  const [resetSuccess, setResetSuccess] = useState(false);
   const { route, query } = useLocation();
 
   const redirectPath = new URLSearchParams(query).get("redirect") || "/";
@@ -30,7 +28,7 @@ export default function Login() {
       setLoading(true);
       const success = await resetPassword(email);
       setLoading(false);
-      if (success) resetSuccess.value = true;
+      if (success) setResetSuccess(true);
       return;
     }
 
@@ -70,7 +68,7 @@ export default function Login() {
           </div>
         )}
 
-        {resetSuccess.value && (
+        {resetSuccess && (
           <div
             className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
             role="alert"

@@ -6,7 +6,6 @@ import {
   isAuthenticated,
 } from "../../services/auth";
 import { useLocation } from "preact-iso";
-import { useSignal } from "@preact/signals";
 import "./styles.scss";
 
 export default function Signup() {
@@ -16,7 +15,7 @@ export default function Signup() {
   const [formError, setFormError] = useState("");
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
-  const success = useSignal(false);
+  const [success, setSuccess] = useState(false);
   const { route } = useLocation();
 
   if (isAuthenticated.value) route("/");
@@ -42,7 +41,7 @@ export default function Signup() {
     setLoading(false);
 
     if (successful) {
-      success.value = true;
+      setSuccess(true);
     }
   };
 
@@ -77,7 +76,7 @@ export default function Signup() {
           </div>
         )}
 
-        {success.value && (
+        {success && (
           <div
             className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative"
             role="alert"
@@ -94,7 +93,7 @@ export default function Signup() {
           </div>
         )}
 
-        {!success.value && (
+        {!success && (
           <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
             <div className="rounded-md shadow-sm -space-y-px">
               <div>

@@ -95,7 +95,7 @@ export async function signUp(email, password) {
   authError.value = null;
   try {
     const {
-      data: { user },
+      data: { user: newUser },
       error,
     } = await supabase.auth.signUp({
       email,
@@ -107,7 +107,7 @@ export async function signUp(email, password) {
       return false;
     }
 
-    user.value = user;
+    user.value = newUser;
     return true;
   } catch (error) {
     authError.value = error.message;
@@ -138,7 +138,7 @@ export async function resetPassword(email) {
   authError.value = null;
   try {
     const { data, error } =
-      await supabase.auth.api.resetPasswordForEmail(email);
+      await supabase.auth.resetPasswordForEmail(email);
 
     if (error) {
       authError.value = error.message;

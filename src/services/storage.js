@@ -340,8 +340,6 @@ export class TabStorage {
   async saveTab(tab) {
     try {
       if (!isAuthenticated.value) {
-        // Inform user they need to be logged in
-        alert("Please log in to save your beat");
         return null;
       }
 
@@ -417,38 +415,6 @@ export class TabStorage {
       return true;
     } catch (error) {
       console.error("Exception deleting tab:", error);
-      return false;
-    }
-  }
-
-  // Toggle favorite status
-  async toggleFavorite(id) {
-    try {
-      if (!isAuthenticated.value) {
-        return false;
-      }
-
-      // Get current tab
-      const tab = await this.getTab(id);
-      if (!tab) {
-        return false;
-      }
-
-      // Toggle the favorite status
-      const { error } = await supabase
-        .from(this.tableName)
-        .update({ isFavorite: !tab.isFavorite })
-        .eq("id", id)
-        .eq("user_id", user.value.id);
-
-      if (error) {
-        console.error("Error toggling favorite:", error);
-        return false;
-      }
-
-      return !tab.isFavorite;
-    } catch (error) {
-      console.error("Exception toggling favorite:", error);
       return false;
     }
   }

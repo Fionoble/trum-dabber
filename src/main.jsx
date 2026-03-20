@@ -16,8 +16,9 @@ import Frame from "./pages/shared/Frame";
 
 function App() {
   useEffect(() => {
-    const cleanup = initAuth();
-    return cleanup;
+    let cleanup;
+    initAuth().then((fn) => { cleanup = fn; });
+    return () => { if (cleanup) cleanup(); };
   }, []);
 
   return (
