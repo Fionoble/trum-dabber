@@ -1,6 +1,8 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
+import { useLocation } from "preact-iso";
 import { tabStorage } from "../../services/storage";
 import { isAuthenticated } from "../../services/auth";
+import { importTabFromJson } from "../../utils/tabIO";
 import MenuIcon from "../../assets/icons/Menu.svg.jsx";
 import GridViewIcon from "../../assets/icons/GridView.svg.jsx";
 import PlusIcon from "../../assets/icons/Plus.svg.jsx";
@@ -8,6 +10,8 @@ import ErrorIcon from "../../assets/icons/Error.svg.jsx";
 import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
 import TrashIcon from "../../assets/icons/TrashIcon.svg.jsx";
 import TrashIconFilled from "../../assets/icons/TrashIconFilled.svg.jsx";
+import UploadIcon from "../../assets/icons/Upload.svg.jsx";
+import SpinnerIcon from "../../assets/icons/Spinner.svg.jsx";
 import "./styles.scss";
 
 export default function TabList() {
@@ -16,6 +20,10 @@ export default function TabList() {
   const [viewMode, setViewMode] = useState("grid"); // 'grid' or 'list'
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [error, setError] = useState(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importError, setImportError] = useState(null);
+  const importFileRef = useRef(null);
+  const { route } = useLocation();
 
   useEffect(() => {
     loadTabs();
@@ -68,6 +76,42 @@ export default function TabList() {
     }
   };
 
+  const handleImportClick = () => {
+    setImportError(null);
+    importFileRef.current.click();
+  };
+
+  const handleImportFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      const text = await file.text();
+      const { tab, errors } = importTabFromJson(text);
+
+      if (errors.length > 0) {
+        setImportError(`Invalid file: ${errors[0]}`);
+        return;
+      }
+
+      const newId = await tabStorage.saveTab(tab);
+      if (newId) {
+        route(`/editor/${newId}`);
+      } else {
+        setImportError('Failed to save imported tab. Are you logged in?');
+      }
+    } catch (err) {
+      console.error('Import error:', err);
+      setImportError('An unexpected error occurred during import.');
+    } finally {
+      setIsImporting(false);
+      e.target.value = '';
+    }
+  };
+
   const toggleViewMode = () => {
     setViewMode(viewMode === "grid" ? "list" : "grid");
   };
@@ -97,22 +141,47 @@ export default function TabList() {
             {viewMode === "grid" ? <MenuIcon /> : <GridViewIcon />}
           </button>
 
+          {/* Import JSON button */}
+          <button
+            onClick={handleImportClick}
+            disabled={isImporting || !isAuthenticated.value}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 active:bg-gray-300 flex items-center gap-2 disabled:opacity-50 transition-colors"
+            title={isAuthenticated.value ? 'Import from JSON' : 'Log in to import'}
+          >
+            {isImporting ? <SpinnerIcon /> : <UploadIcon />}
+            <span className="hidden sm:inline">Import</span>
+          </button>
+          <input
+            ref={importFileRef}
+            type="file"
+            accept=".json,application/json"
+            onChange={handleImportFileChange}
+            className="hidden"
+          />
+
           {/* Create new tab button */}
           <a
             href="/editor/new"
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 flex items-center gap-2"
           >
             <PlusIcon />
-            Create New Beat
+            <span className="hidden sm:inline">Create New Beat</span>
+            <span className="sm:hidden">New</span>
           </a>
         </div>
       </div>
 
-      {/* Error message */}
+      {/* Error messages */}
       {error && (
-        <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex items-center">
+        <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex items-center gap-2">
           <ErrorIcon />
           {error}
+        </div>
+      )}
+      {importError && (
+        <div className="bg-red-100 text-red-800 p-4 rounded-md mb-6 flex items-center gap-2">
+          <ErrorIcon />
+          {importError}
         </div>
       )}
 

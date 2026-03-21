@@ -4,6 +4,7 @@ import { useLocation } from "preact-iso";
 import { isAuthenticated, isLoading } from "../../services/auth";
 import "./styles.scss";
 import { tabStorage } from "../../services/storage";
+import { exportTabAsJson } from "../../utils/tabIO";
 import PlayIcon from "../../assets/icons/Play.svg.jsx";
 import StopIcon from "../../assets/icons/Stop.svg.jsx";
 import SaveIcon from "../../assets/icons/Save.svg.jsx";
@@ -17,6 +18,7 @@ import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
 import SoloIcon from "../../assets/icons/Solo.svg.jsx";
 import GridIcon from "../../assets/icons/Grid.svg.jsx";
 import CloseIcon from "../../assets/icons/Close.svg.jsx";
+import DownloadIcon from "../../assets/icons/Download.svg.jsx";
 import InstrumentIcons from "../../assets/icons/instruments";
 
 const MAX_BAR_COUNT = 25;
@@ -939,6 +941,26 @@ export default function Editor({ id, newTab }) {
     }
   };
 
+  const handleExportJson = () => {
+    exportTabAsJson({
+      name: tabName || 'Untitled Beat',
+      bpm,
+      tsNumerator: timeSignature.numerator,
+      tsDenominator: timeSignature.denominator,
+      measures: bars,
+      instrumentOrder: [...drumSounds],
+      barRepeats: Object.keys(barRepeats).length > 0 ? barRepeats : undefined,
+      tracks: pattern.map((patternRow, index) => {
+        const sound = drumSounds[index];
+        if (specialTracks[index]) {
+          return { id: `track-${sound}`, name: sound, sound, pattern: patternRow, states: specialTracks[index].states };
+        }
+        return { id: `track-${sound}`, name: sound, sound, pattern: patternRow };
+      }),
+      volume: 0.7,
+    });
+  };
+
   if (id && isLoading.value) {
     return (
       <div className="text-center py-8">
@@ -972,12 +994,21 @@ export default function Editor({ id, newTab }) {
           )}
         </div>
 
-        <div className="flex items-center shrink-0 ml-2">
+        <div className="flex items-center shrink-0 ml-2 gap-2">
           {saveSuccess && (
-            <span className="text-green-500 mr-3 animate-fade-out hidden sm:inline">
+            <span className="text-green-500 mr-1 animate-fade-out hidden sm:inline">
               Saved successfully!
             </span>
           )}
+          <button
+            onClick={handleExportJson}
+            disabled={!isLoaded}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 flex items-center gap-2 active:transform active:translate-y-0.5 disabled:opacity-50 whitespace-nowrap"
+            title="Export as JSON"
+          >
+            <DownloadIcon />
+            <span className="hidden sm:inline">Export</span>
+          </button>
           <button
             onClick={() => saveTab(true)}
             disabled={isSaving || !isLoaded}
