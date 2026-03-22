@@ -214,6 +214,76 @@ export class TabStorage {
     }
   }
 
+  // Get a generic setting by key
+  async getSetting(key, defaults = {}) {
+    try {
+      if (!isAuthenticated.value) return defaults;
+
+      const { data, error } = await supabase
+        .from(this.settingsTable)
+        .select("settings")
+        .eq("user_id", user.value.id)
+        .eq("key", key)
+        .single();
+
+      if (error || !data) return defaults;
+
+      return { ...defaults, ...data.settings };
+    } catch (error) {
+      console.error(`Error getting setting "${key}":`, error);
+      return defaults;
+    }
+  }
+
+  // Save a generic setting by key
+  async saveSetting(key, settings) {
+    try {
+      if (!isAuthenticated.value) return false;
+
+      const { data: existingData, error: checkError } = await supabase
+        .from(this.settingsTable)
+        .select("id")
+        .eq("user_id", user.value.id)
+        .eq("key", key)
+        .single();
+
+      if (checkError && checkError.code !== "PGRST116") {
+        console.error(`Error checking setting "${key}":`, checkError);
+        return false;
+      }
+
+      if (existingData) {
+        const { error } = await supabase
+          .from(this.settingsTable)
+          .update({ settings, updated_at: new Date().toISOString() })
+          .eq("id", existingData.id);
+
+        if (error) {
+          console.error(`Error updating setting "${key}":`, error);
+          return false;
+        }
+      } else {
+        const { error } = await supabase.from(this.settingsTable).insert({
+          user_id: user.value.id,
+          key,
+          settings,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+
+        if (error) {
+          console.error(`Error inserting setting "${key}":`, error);
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error(`Error saving setting "${key}":`, error);
+      return false;
+    }
+  }
+
   // Get all tabs for the current user
   async getTabs() {
     try {

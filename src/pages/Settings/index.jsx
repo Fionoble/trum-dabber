@@ -5,6 +5,8 @@ import "./styles.scss";
 import { useLocation } from "preact-iso";
 import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
 import PlayIcon from "../../assets/icons/Play.svg.jsx";
+import EyeIcon from "../../assets/icons/Eye.svg.jsx";
+import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
 import {
   DndContext,
   closestCenter,
@@ -84,6 +86,11 @@ export default function Settings() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [newInstrument, setNewInstrument] = useState("");
+  const [apiKeys, setApiKeys] = useState({ openaiKey: '', anthropicKey: '' });
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showAnthropicKey, setShowAnthropicKey] = useState(false);
+  const [apiKeysSaving, setApiKeysSaving] = useState(false);
+  const [apiKeysSaveSuccess, setApiKeysSaveSuccess] = useState(false);
   const { route } = useLocation();
   
   // Set up sensors for drag and drop
@@ -118,9 +125,11 @@ export default function Settings() {
         setIsLoading(true);
         const savedInstruments = await tabStorage.getUserInstruments();
         const savedPlaybackSettings = await tabStorage.getPlaybackSettings();
-        
+        const savedApiKeys = await tabStorage.getSetting('apiKeys', { openaiKey: '', anthropicKey: '' });
+
         setInstruments(savedInstruments);
         setPlaybackSettings(savedPlaybackSettings);
+        setApiKeys(savedApiKeys);
       } catch (error) {
         console.error("Failed to load settings:", error);
       } finally {
@@ -153,6 +162,28 @@ export default function Settings() {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Handler for saving API keys
+  const handleSaveApiKeys = async () => {
+    try {
+      setApiKeysSaving(true);
+      setError(null);
+
+      const success = await tabStorage.saveSetting('apiKeys', apiKeys);
+
+      if (success) {
+        setApiKeysSaveSuccess(true);
+        setTimeout(() => setApiKeysSaveSuccess(false), 3000);
+      } else {
+        setError('Failed to save API keys. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to save API keys:', error);
+      setError('An unexpected error occurred. Please try again.');
+    } finally {
+      setApiKeysSaving(false);
     }
   };
 
@@ -430,6 +461,126 @@ export default function Settings() {
                 </div>
               </div>
             </div>
+          </>
+        )}
+      </div>
+
+      {/* API Keys Section */}
+      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
+        <h2 className="text-xl font-semibold mb-4 flex items-center">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-5 w-5 mr-2 text-indigo-600"
+            viewBox="0 0 20 20"
+            fill="currentColor"
+          >
+            <path
+              fillRule="evenodd"
+              d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
+              clipRule="evenodd"
+            />
+          </svg>
+          API Keys
+        </h2>
+
+        {isLoading ? (
+          <div className="flex justify-center p-4">
+            <div className="spinner"></div>
+          </div>
+        ) : (
+          <>
+            <p className="text-sm text-gray-600 mb-4">
+              Configure API keys for AI-powered features. Keys are stored in
+              your account and never shared.
+            </p>
+
+            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
+              <div className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="openai-key"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    OpenAI API Key
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="openai-key"
+                      type={showOpenaiKey ? 'text' : 'password'}
+                      value={apiKeys.openaiKey}
+                      onChange={(e) =>
+                        setApiKeys({ ...apiKeys, openaiKey: e.target.value })
+                      }
+                      placeholder="sk-..."
+                      className="border border-gray-300 rounded-md p-2 text-sm flex-grow font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                      className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 text-gray-600"
+                      title={showOpenaiKey ? 'Hide key' : 'Show key'}
+                    >
+                      <span className="h-4 w-4 block">
+                        {showOpenaiKey ? <EyeOffIcon /> : <EyeIcon />}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="anthropic-key"
+                    className="block text-sm font-medium text-gray-700 mb-1"
+                  >
+                    Anthropic API Key
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="anthropic-key"
+                      type={showAnthropicKey ? 'text' : 'password'}
+                      value={apiKeys.anthropicKey}
+                      onChange={(e) =>
+                        setApiKeys({ ...apiKeys, anthropicKey: e.target.value })
+                      }
+                      placeholder="sk-ant-..."
+                      className="border border-gray-300 rounded-md p-2 text-sm flex-grow font-mono"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAnthropicKey(!showAnthropicKey)}
+                      className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 text-gray-600"
+                      title={showAnthropicKey ? 'Hide key' : 'Show key'}
+                    >
+                      <span className="h-4 w-4 block">
+                        {showAnthropicKey ? <EyeOffIcon /> : <EyeIcon />}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div>
+                {apiKeysSaveSuccess && (
+                  <span className="text-green-500 text-sm animate-fade-out">
+                    API keys saved successfully!
+                  </span>
+                )}
+                {error && <span className="text-red-500 text-sm">{error}</span>}
+              </div>
+              <button
+                onClick={handleSaveApiKeys}
+                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                disabled={apiKeysSaving}
+              >
+                {apiKeysSaving ? 'Saving...' : 'Save Keys'}
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-3 italic">
+              Keys are stored in your account and never shared.
+            </p>
           </>
         )}
       </div>
