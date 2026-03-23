@@ -77,7 +77,7 @@ async function callOpenAI(base64Image, mimeType, apiKey) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: 'gpt-4o',
+      model: 'gpt-5.4-mini',
       max_tokens: 4096,
       messages: [
         { role: 'system', content: buildSystemPrompt() },
@@ -113,18 +113,69 @@ async function callOpenAI(base64Image, mimeType, apiKey) {
   return extractJson(content);
 }
 
+async function callAnthropic(base64Image, mimeType, apiKey) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'content-type': 'application/json',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-opus-4-6',
+      max_tokens: 4096,
+      system: buildSystemPrompt(),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: {
+                type: 'base64',
+                media_type: mimeType,
+                data: base64Image,
+              },
+            },
+            { type: 'text', text: buildUserPrompt() },
+          ],
+        },
+      ],
+    }),
+  });
+
+  if (!response.ok) {
+    const status = response.status;
+    if (status === 401) {
+      throw new Error('Invalid Anthropic API key. Please check your key in Settings.');
+    }
+    if (status === 429) {
+      throw new Error('Anthropic rate limit reached. Please try again in a moment.');
+    }
+    throw new Error(`Anthropic API error (status ${status}). Please try again.`);
+  }
+
+  const data = await response.json();
+  const content = data.content?.[0]?.text;
+
+  if (!content) {
+    throw new Error('Empty response from Anthropic. Please try again.');
+  }
+
+  return extractJson(content);
+}
+
 export async function transcribeTabFromImage(base64Image, mimeType, apiKeys) {
   const { openaiKey, anthropicKey } = apiKeys;
+
+  if (anthropicKey) {
+    return callAnthropic(base64Image, mimeType, anthropicKey);
+  }
 
   if (openaiKey) {
     return callOpenAI(base64Image, mimeType, openaiKey);
   }
 
-  if (anthropicKey) {
-    throw new Error(
-      'Anthropic API cannot be called directly from the browser due to CORS restrictions. Please configure an OpenAI API key in Settings.'
-    );
-  }
-
-  throw new Error('No API key configured. Add an OpenAI API key in Settings.');
+  throw new Error('No API key configured. Add an API key in Settings.');
 }

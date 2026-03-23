@@ -145,8 +145,8 @@ export default function AiImportModal({ onClose }) {
         )}
 
         <p className="text-xs text-gray-500 mb-4">
-          Requires an OpenAI API key configured in Settings.
-          The image is sent directly to OpenAI's API for processing.
+          Requires an API key configured in Settings (Anthropic or OpenAI).
+          The image is sent directly to the provider's API for processing.
         </p>
 
         <div className="flex justify-end gap-3">
