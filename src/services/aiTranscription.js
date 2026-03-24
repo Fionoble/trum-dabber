@@ -4,11 +4,34 @@ const VALID_SOUNDS = [
 ];
 
 function buildSystemPrompt() {
-  return `You are a drum tab transcription assistant. You convert images of drum notation or drum tabs into a specific JSON format. Always respond with ONLY valid JSON, no explanation text, no markdown code blocks.`;
+  return `You are an expert drum transcription assistant. You accurately read drum sheet music and drum tabs from images and convert them into a specific JSON format.
+
+You understand standard drum notation:
+- Bass drum (kick): bottom space of the staff, regular noteheads
+- Snare drum: third space from bottom, regular noteheads
+- Hi-hat (closed): top of staff or above, x-shaped noteheads
+- Hi-hat (open): x-shaped notehead with "o" above it
+- Crash cymbal: x-shaped notehead above the staff, often at the start of sections
+- Ride cymbal: x-shaped notehead on top line of staff
+- High tom: first space below top line, regular noteheads
+- Mid tom: third line from top, regular noteheads
+- Floor tom: second space from bottom, regular noteheads
+
+You also understand text-based drum tabs where instruments are labeled on the left (HH, SD, BD, etc.) with x, X, o, O marks on a grid.
+
+Always respond with ONLY valid JSON, no explanation text, no markdown code blocks.`;
 }
 
 function buildUserPrompt() {
-  return `Analyze this drum tab or drum notation image and convert it to the following JSON format exactly:
+  return `Carefully analyze this drum notation image. Read each measure left to right, top to bottom across all lines/systems. Pay close attention to:
+- The exact rhythmic placement of each hit (which subdivision it falls on)
+- The difference between x-noteheads (cymbals) and regular noteheads (drums)
+- Open hi-hat marks (o above the note) vs closed hi-hat
+- Ghost notes (parenthesized or smaller noteheads, usually on snare)
+- Accents (> above notes)
+- Rests and empty subdivisions
+
+Convert to this JSON format exactly:
 
 {
   "$schema": "trum-dabber-tab",
@@ -30,14 +53,16 @@ function buildUserPrompt() {
 }
 
 Rules:
+- Count the measures carefully by looking at barlines in the image
 - Each pattern array must have exactly (tsNumerator * 8 * measures) elements
+- There are 8 subdivisions per beat (32nd note resolution within each beat)
 - Each element is either false (not hit) or true (hit)
 - For the hihat track ONLY, elements can be false, "hihat" (closed hit), or "hihatOpen" (open hit)
 - Available sound values: ${VALID_SOUNDS.join(', ')}
-- Do NOT include hihatOpen as a separate track. Use the "hihat" track with "hihat" or "hihatOpen" string values in the pattern
-- Use 8 subdivisions per beat (16th note resolution)
+- Do NOT include hihatOpen as a separate track. Use the "hihat" track with "hihat" or "hihatOpen" string values
 - instrumentOrder must list sounds in the same order as the tracks array
-- Only include instruments that appear in the tab image
+- Only include instruments that actually appear in the notation
+- A quarter note hit occupies subdivision 0 of that beat. An eighth note on the "and" is subdivision 4. 16th notes fall on 0, 2, 4, 6.
 - Respond with ONLY the JSON object`;
 }
 
@@ -78,7 +103,7 @@ async function callOpenAI(base64Image, mimeType, apiKey) {
     },
     body: JSON.stringify({
       model: 'gpt-5.4-mini',
-      max_completion_tokens: 4096,
+      max_completion_tokens: 16384,
       messages: [
         { role: 'system', content: buildSystemPrompt() },
         {
@@ -124,7 +149,7 @@ async function callAnthropic(base64Image, mimeType, apiKey) {
     },
     body: JSON.stringify({
       model: 'claude-opus-4-6',
-      max_tokens: 4096,
+      max_tokens: 16384,
       system: buildSystemPrompt(),
       messages: [
         {
