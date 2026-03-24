@@ -166,16 +166,57 @@ async function callAnthropic(base64Image, mimeType, apiKey) {
   return extractJson(content);
 }
 
+const SUBDIVISION = 8;
+
+function reconcilePatterns(parsed) {
+  if (!parsed || !Array.isArray(parsed.tracks) || parsed.tracks.length === 0) {
+    return parsed;
+  }
+
+  const tsNum = Number(parsed.tsNumerator) || 4;
+  const beatsPerMeasure = tsNum * SUBDIVISION;
+  const declaredLength = beatsPerMeasure * (Number(parsed.measures) || 1);
+
+  // Find the most common pattern length across tracks
+  const lengths = parsed.tracks.map((t) => t.pattern?.length || 0);
+  const maxLength = Math.max(...lengths);
+
+  // If patterns already match the declared length, nothing to do
+  if (maxLength === declaredLength) return parsed;
+
+  // Try to infer the correct measure count from the longest pattern
+  const inferredMeasures = Math.ceil(maxLength / beatsPerMeasure);
+  const targetLength = inferredMeasures * beatsPerMeasure;
+
+  parsed.measures = inferredMeasures;
+
+  // Pad or truncate each track's pattern to match
+  for (const track of parsed.tracks) {
+    if (!Array.isArray(track.pattern)) continue;
+    if (track.pattern.length < targetLength) {
+      track.pattern = track.pattern.concat(
+        new Array(targetLength - track.pattern.length).fill(false)
+      );
+    } else if (track.pattern.length > targetLength) {
+      track.pattern = track.pattern.slice(0, targetLength);
+    }
+  }
+
+  return parsed;
+}
+
 export async function transcribeTabFromImage(base64Image, mimeType, apiKeys) {
   const { openaiKey, anthropicKey } = apiKeys;
 
+  let rawJson;
+
   if (anthropicKey) {
-    return callAnthropic(base64Image, mimeType, anthropicKey);
+    rawJson = await callAnthropic(base64Image, mimeType, anthropicKey);
+  } else if (openaiKey) {
+    rawJson = await callOpenAI(base64Image, mimeType, openaiKey);
+  } else {
+    throw new Error('No API key configured. Add an API key in Settings.');
   }
 
-  if (openaiKey) {
-    return callOpenAI(base64Image, mimeType, openaiKey);
-  }
-
-  throw new Error('No API key configured. Add an API key in Settings.');
+  return reconcilePatterns(rawJson);
 }
