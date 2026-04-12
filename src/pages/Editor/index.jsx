@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "preact/hooks";
 import { DrumMachine } from "../../utils/drumMachine";
 import { useLocation } from "preact-iso";
 import { isAuthenticated, isLoading } from "../../services/auth";
-import "./styles.scss";
 import { tabStorage } from "../../services/storage";
 import PlayIcon from "../../assets/icons/Play.svg.jsx";
 import StopIcon from "../../assets/icons/Stop.svg.jsx";
@@ -495,20 +494,21 @@ export default function Editor({ id, newTab }) {
     return (
       <div
         key={key}
-        className={`bar-section segment-${segmentIndex} ${isFirstSegment ? "" : "continuation"} ${barRepeats[barIndex] ? "has-repeat" : ""}`}
+        className={`relative w-full p-2 md:p-3 rounded-xl border transition-shadow
+          ${isFirstSegment ? 'border-l-[3px] border-l-primary' : 'border-l-primary'}
+          ${barRepeats[barIndex] ? 'border-r-[3px] border-r-success' : ''}
+          ${!isFirstSegment ? 'mt-[-4px]' : ''}
+          border-white/10 bg-surface`}
       >
         {/* Only show the bar number on the first segment, now clickable */}
         {isFirstSegment && (
           <div
-            className="bar-number"
+            className="bar-number absolute -top-2.5 left-3 bg-primary text-white px-2 py-0.5 rounded-full text-[11px] font-bold z-[5] cursor-pointer flex items-center gap-1 hover:bg-primary-light active:translate-y-px transition-all"
             onClick={(e) => handleBarNumberClick(e, barIndex)}
           >
             {barIndex + 1}
             {barRepeats[barIndex] && (
-              <span
-                className="repeat-indicator"
-                title={`Plays ${barRepeats[barIndex].repetitions} times`}
-              >
+              <span className="inline-flex items-center ml-0.5 text-[10px]">
                 <PlayIcon /> {barRepeats[barIndex].repetitions}x
               </span>
             )}
@@ -516,20 +516,18 @@ export default function Editor({ id, newTab }) {
         )}
 
         {/* Drum rows for this bar segment */}
-        <div
-          className={`bar-content-wrapper ${barIndex === 0 && isFirstSegment ? "first-bar" : "secondary-bar"}`}
-        >
+        <div className={`flex w-full ${barIndex === 0 && isFirstSegment ? '' : ''}`}>
           {/* Only show instrument names for the first bar's first segment */}
           {barIndex === 0 && isFirstSegment && (
-            <div className="drum-names-column">
+            <div className="w-8 min-w-[32px] md:w-[60px] md:min-w-[60px] shrink-0">
               {pattern.map((_, rowIndex) => (
                 <div
                   key={rowIndex}
-                  className={`drum-name-wrapper ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                  className={`h-7 md:h-7 mb-1 last:mb-0 flex items-center ${hiddenTracks[rowIndex] ? 'opacity-40' : ''}`}
                 >
-                  <div className="drum-name">
+                  <div className="w-full flex items-center justify-end pr-1 md:pr-2">
                     <div
-                      className={`track-icon ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                      className={`track-icon relative w-6 h-6 md:w-[30px] md:h-[30px] cursor-pointer flex items-center justify-center text-on-surface-dim rounded hover:bg-white/5 hover:text-primary active:bg-white/10 transition-colors ${hiddenTracks[rowIndex] ? 'opacity-50' : ''}`}
                       onClick={(e) => handleTrackIconClick(e, rowIndex)}
                     >
                       {(() => {
@@ -538,7 +536,7 @@ export default function Editor({ id, newTab }) {
                           InstrumentIcons.tom;
                         return <IconComponent />;
                       })()}
-                      <div className="track-tooltip">
+                      <div className="absolute -top-6 right-0 bg-black/80 text-white px-1.5 py-0.5 rounded text-[10px] opacity-0 pointer-events-none whitespace-nowrap z-50 transition-opacity group-hover:opacity-100">
                         {drumSounds[rowIndex]}
                       </div>
                     </div>
@@ -548,44 +546,46 @@ export default function Editor({ id, newTab }) {
             </div>
           )}
 
-          <div
-            className={`scrollable-grid-container ${barIndex === 0 && isFirstSegment ? "with-names" : "full-width"}`}
-          >
-            <div className="drum-rows-container">
+          <div className={`flex-1 min-w-0 overflow-x-auto overflow-y-hidden ${barIndex === 0 && isFirstSegment ? 'max-w-[calc(100%-32px)] md:max-w-[calc(100%-60px)]' : 'w-full'}`}>
+            <div className="flex flex-col w-full min-w-full">
               {pattern.map((row, rowIndex) => (
                 <div
                   key={rowIndex}
-                  className={`drum-row ${hiddenTracks[rowIndex] ? "hidden-track" : ""}`}
+                  className={`flex items-center h-7 md:h-7 mb-1 last:mb-0 ${hiddenTracks[rowIndex] ? 'opacity-40 h-4 overflow-hidden' : ''}`}
                 >
                   {/* Grid cells for this bar segment */}
-                  <div
-                    className={`drum-grid resolution-${SUBDIVISION} ${isFirstSegment ? "segment-start" : ""}`}
-                  >
-                    {row.slice(startStep, endStep).map((cell, cellIndex) => {
-                      const globalColIndex = startStep + cellIndex;
-                      // Only show beat markers at actual beat positions
-                      const beatPosition =
-                        (globalColIndex - barIndex * stepsPerBar) % 4;
-                      const isBeatStart = beatPosition === 0;
+                  {!hiddenTracks[rowIndex] && (
+                    <div className="flex gap-[1px] md:gap-0.5 w-full">
+                      {row.slice(startStep, endStep).map((cell, cellIndex) => {
+                        const globalColIndex = startStep + cellIndex;
+                        // Only show beat markers at actual beat positions
+                        const beatPosition =
+                          (globalColIndex - barIndex * stepsPerBar) % 4;
+                        const isBeatStart = beatPosition === 0;
 
-                      return (
-                        <button
-                          key={cellIndex}
-                          className={`drum-cell
-                            ${cell ? "active" : ""}
-                            ${cell === "hihatOpen" ? "open-hihat" : ""}
-                            ${currentStep === globalColIndex ? "playing" : ""}
-                            ${isBeatStart ? "beat-start" : ""}
-                            ${cellIndex === 0 && isFirstSegment ? "bar-start" : ""}
-                          `}
-                          onClick={() =>
-                            handleCellClick(rowIndex, globalColIndex)
-                          }
-                          aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${globalColIndex - barIndex * stepsPerBar + 1}`}
-                        />
-                      );
-                    })}
-                  </div>
+                        return (
+                          <button
+                            key={cellIndex}
+                            className={`drum-cell flex-1 min-w-0 h-7 md:h-6 rounded-[3px] border-0 p-0 transition-all duration-75 relative
+                              ${cell ? (cell === 'hihatOpen' ? 'bg-primary-light' : 'bg-primary') : 'bg-surface-light'}
+                              ${currentStep === globalColIndex ? 'ring-2 ring-primary-light shadow-[0_0_8px_rgba(99,102,241,0.5)]' : ''}
+                              ${cell && currentStep === globalColIndex ? 'scale-105 shadow-[0_0_12px_rgba(99,102,241,0.7)]' : ''}
+                              ${isBeatStart && !cell ? 'bg-surface-light/80' : ''}
+                              ${!cell ? 'hover:bg-surface-light/60' : 'hover:brightness-110'}
+                              active:scale-95`}
+                            onClick={() =>
+                              handleCellClick(rowIndex, globalColIndex)
+                            }
+                            aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${globalColIndex - barIndex * stepsPerBar + 1}`}
+                          >
+                            {cell === 'hihatOpen' && (
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white font-bold">O</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -935,17 +935,36 @@ export default function Editor({ id, newTab }) {
 
   if (id && isLoading.value) {
     return (
-      <div className="text-center py-8">
-        <div className="spinner mb-4"></div>
-        <p>Loading...</p>
+      <div className="flex flex-col items-center justify-center py-16 text-on-surface">
+        <div className="w-10 h-10 mb-4 border-3 border-white/10 border-t-primary rounded-full animate-spin" />
+        <p className="text-on-surface-dim">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="editor-container p-4">
+    <div className="bg-bg min-h-full px-2 py-3 md:p-4">
+      <style>{`
+        @keyframes editor-fade-out {
+          0% { opacity: 1; }
+          70% { opacity: 1; }
+          100% { opacity: 0; }
+        }
+        .animate-editor-fade-out {
+          animation: editor-fade-out 2s forwards;
+        }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+        input[type="number"] {
+          -moz-appearance: textfield;
+        }
+      `}</style>
+
       {/* Header with title input and save button */}
-      <div className="flex justify-between items-center mb-3 md:mb-6 gap-2">
+      <div className="flex justify-between items-center mb-3 gap-2">
         <div className="flex items-center relative grow min-w-0">
           <input
             ref={nameInputRef}
@@ -954,13 +973,13 @@ export default function Editor({ id, newTab }) {
             onChange={handleNameChange}
             onFocus={() => setIsNameFocused(true)}
             onBlur={handleNameBlur}
-            className={`text-lg md:text-2xl font-bold bg-transparent border-b-2 transition-colors px-1 md:px-2 py-1 w-full focus:outline-none truncate ${
-              isNameFocused ? "border-indigo-500" : "border-gray-300"
+            className={`text-lg md:text-2xl font-bold bg-transparent border-b-2 transition-colors px-1 md:px-2 py-1 w-full focus:outline-none truncate text-on-surface ${
+              isNameFocused ? "border-primary" : "border-white/20"
             }`}
             placeholder="Untitled Beat"
           />
           {isNameFocused && (
-            <div className="absolute -bottom-5 left-1 text-xs text-gray-500 hidden md:block">
+            <div className="absolute -bottom-5 left-1 text-xs text-on-surface-dim hidden md:block">
               Press Enter or click outside to save name
             </div>
           )}
@@ -968,20 +987,18 @@ export default function Editor({ id, newTab }) {
 
         <div className="flex items-center shrink-0">
           {saveSuccess && (
-            <span className="text-green-500 mr-3 animate-fade-out hidden sm:inline">
-              Saved successfully!
+            <span className="text-success mr-3 animate-editor-fade-out hidden sm:inline text-sm">
+              Saved!
             </span>
           )}
           <button
             onClick={() => saveTab(true)}
             disabled={isSaving || !isLoaded}
-            className="p-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-1.5 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
+            className="p-2 md:px-4 md:py-2 bg-primary text-white rounded-lg hover:bg-primary-light flex items-center gap-1.5 active:scale-95 disabled:opacity-50 whitespace-nowrap transition-all"
           >
             {isSaving ? (
               <>
-                <span className="text-white">
-                  <SpinnerIcon />
-                </span>
+                <SpinnerIcon />
                 <span className="hidden md:inline">Saving...</span>
               </>
             ) : (
@@ -995,11 +1012,11 @@ export default function Editor({ id, newTab }) {
       </div>
 
       {/* Basic Controls */}
-      <div className="controls flex flex-wrap items-center mb-2 md:mb-4 gap-y-2 gap-x-2 md:gap-x-4 md:gap-y-3 p-2 md:p-4 bg-gray-50 rounded-lg">
+      <div className="flex flex-wrap items-center mb-2 md:mb-4 gap-y-2 gap-x-2 md:gap-x-4 p-2 md:p-3 bg-surface rounded-xl sticky top-0 z-20 border border-white/10">
         <button
           onClick={togglePlayback}
           disabled={!isLoaded}
-          className="p-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 flex items-center gap-1.5"
+          className="p-2 md:px-4 md:py-2 bg-primary text-white rounded-lg hover:bg-primary-light active:scale-95 disabled:opacity-50 flex items-center gap-1.5 transition-all"
         >
           {isPlaying ? (
             <>
@@ -1015,7 +1032,7 @@ export default function Editor({ id, newTab }) {
         </button>
 
         <div className="flex items-center gap-1.5">
-          <label htmlFor="bpm-input" className="text-sm font-medium text-gray-700">
+          <label htmlFor="bpm-input" className="text-sm font-medium text-on-surface-dim">
             BPM
           </label>
           <input
@@ -1026,28 +1043,28 @@ export default function Editor({ id, newTab }) {
             value={bpm}
             onChange={(e) => setBpm(e.target.value)}
             onBlur={handleBpmBlur}
-            className="w-14 p-1 border border-gray-300 rounded text-center text-sm"
+            className="w-14 p-1 bg-surface-light border border-white/10 rounded text-center text-sm text-on-surface focus:outline-none focus:border-primary"
           />
         </div>
 
         {/* Bar Count Controls */}
-        <div className="bars-control flex items-center gap-1.5">
-          <label className="text-sm text-gray-600">Bars</label>
-          <div className="flex items-center border border-gray-300 rounded-md">
+        <div className="flex items-center gap-1.5">
+          <label className="text-sm text-on-surface-dim">Bars</label>
+          <div className="flex items-center border border-white/10 rounded-lg overflow-hidden">
             <button
               onClick={() => handleBarCountChange(-1)}
               disabled={bars <= 1}
-              className="px-1.5 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+              className="px-1.5 py-1 text-on-surface-dim hover:bg-white/5 focus:outline-none disabled:opacity-30 transition-colors"
             >
               <MinusIcon />
             </button>
-            <span className="px-2 py-1 border-l border-r border-gray-300 min-w-[24px] text-center text-sm">
+            <span className="px-2 py-1 border-l border-r border-white/10 min-w-[24px] text-center text-sm text-on-surface">
               {bars}
             </span>
             <button
               onClick={() => handleBarCountChange(1)}
               disabled={bars >= MAX_BAR_COUNT}
-              className="px-1.5 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+              className="px-1.5 py-1 text-on-surface-dim hover:bg-white/5 focus:outline-none disabled:opacity-30 transition-colors"
             >
               <PlusIcon />
             </button>
@@ -1056,9 +1073,9 @@ export default function Editor({ id, newTab }) {
 
         <button
           onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-          className="text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-xs md:text-sm md:ml-auto"
+          className="text-on-surface-dim hover:text-primary flex items-center gap-1 text-xs md:text-sm md:ml-auto transition-colors"
         >
-          <span className="hidden md:inline">{showAdvancedControls ? "Hide" : "Show"} Advanced Controls</span>
+          <span className="hidden md:inline">{showAdvancedControls ? "Hide" : "Show"} Advanced</span>
           <span className="md:hidden">More</span>
           <span
             className={`transition-transform ${showAdvancedControls ? "rotate-180" : ""} inline-block`}
@@ -1070,22 +1087,22 @@ export default function Editor({ id, newTab }) {
 
       {/* Advanced Controls - Time Signature and Bars */}
       {showAdvancedControls && (
-        <div className="advanced-controls mb-4 p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
-          <h3 className="text-sm font-medium text-gray-700 mb-3">
+        <div className="mb-3 p-3 md:p-4 bg-surface border border-white/10 rounded-xl">
+          <h3 className="text-sm font-medium text-on-surface-dim mb-3">
             Advanced Controls
           </h3>
 
-          <div className="flex flex-wrap gap-6">
+          <div className="flex flex-wrap gap-4 md:gap-6">
             {/* Time Signature Controls */}
-            <div className="time-signature flex items-center gap-2">
-              <label className="text-sm text-gray-600">Time Signature:</label>
+            <div className="flex items-center gap-2">
+              <label className="text-sm text-on-surface-dim">Time Sig:</label>
               <div className="flex">
                 <select
                   value={timeSignature.numerator}
                   onChange={(e) =>
                     handleTimeSignatureChange("numerator", e.target.value)
                   }
-                  className="p-1 border border-gray-300 rounded-l-md w-12 text-center"
+                  className="p-1 bg-surface-light border border-white/10 rounded-l-md w-12 text-center text-on-surface focus:outline-none focus:border-primary"
                 >
                   {[2, 3, 4, 5, 6, 7, 8, 9, 12].map((num) => (
                     <option key={num} value={num}>
@@ -1093,7 +1110,7 @@ export default function Editor({ id, newTab }) {
                     </option>
                   ))}
                 </select>
-                <span className="flex items-center justify-center border-t border-b border-gray-300 px-2 bg-gray-50">
+                <span className="flex items-center justify-center border-t border-b border-white/10 px-2 bg-surface-light text-on-surface-dim">
                   /
                 </span>
                 <select
@@ -1101,7 +1118,7 @@ export default function Editor({ id, newTab }) {
                   onChange={(e) =>
                     handleTimeSignatureChange("denominator", e.target.value)
                   }
-                  className="p-1 border border-gray-300 rounded-r-md w-12 text-center"
+                  className="p-1 bg-surface-light border border-white/10 rounded-r-md w-12 text-center text-on-surface focus:outline-none focus:border-primary"
                 >
                   {[2, 4, 8, 16].map((num) => (
                     <option key={num} value={num}>
@@ -1112,7 +1129,7 @@ export default function Editor({ id, newTab }) {
               </div>
             </div>
 
-            <div className="text-xs text-gray-500 mt-1 col-span-full">
+            <div className="text-xs text-on-surface-dim mt-1 w-full">
               Note: Changing time signature, bar count, or note resolution will
               resize your pattern. Existing beats will be preserved when
               possible.
@@ -1123,17 +1140,17 @@ export default function Editor({ id, newTab }) {
 
       {/* Loading state */}
       {!isLoaded && (
-        <div className="text-center py-8">
-          <div className="spinner mb-4"></div>
-          <p>Loading drum samples...</p>
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-10 h-10 mb-4 border-3 border-white/10 border-t-primary rounded-full animate-spin" />
+          <p className="text-on-surface-dim">Loading drum samples...</p>
         </div>
       )}
 
       {/* Drum grid with bar-based layout */}
       {isLoaded && (
-        <div className="sequencer" ref={sequencerRef}>
+        <div ref={sequencerRef} className="w-full">
           {/* Bars container - vertical wrapping happens here */}
-          <div className="bars-container">
+          <div className="flex flex-wrap gap-4 w-full">
             {Array(bars)
               .fill(0)
               .map((_, barIndex) => {
@@ -1170,14 +1187,14 @@ export default function Editor({ id, newTab }) {
       {/* Track Context Menu */}
       {trackContextMenu.visible && (
         <div
-          className="track-context-menu"
+          className="track-context-menu fixed bg-surface border border-white/10 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]"
           style={{
             top: `${trackContextMenu.y}px`,
             left: `${trackContextMenu.x}px`,
           }}
         >
           <div
-            className="menu-item"
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
             onClick={() => toggleTrackVisibility(trackContextMenu.trackIndex)}
           >
             {hiddenTracks[trackContextMenu.trackIndex] ? (
@@ -1191,7 +1208,7 @@ export default function Editor({ id, newTab }) {
           </div>
 
           <div
-            className="menu-item"
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
             onClick={() => {
               const newHiddenTracks = {};
               drumSounds.forEach((_, index) => {
@@ -1206,7 +1223,7 @@ export default function Editor({ id, newTab }) {
           </div>
 
           <div
-            className="menu-item"
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
             onClick={() => {
               setHiddenTracks({});
               closeContextMenu();
@@ -1216,9 +1233,11 @@ export default function Editor({ id, newTab }) {
             Show All Tracks
           </div>
 
-          {/* Additional context menu items can be added here */}
-          <div className="divider"></div>
-          <div className="menu-item" onClick={closeContextMenu}>
+          <div className="h-px bg-white/10 my-1" />
+          <div
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface-dim hover:bg-white/5 transition-colors"
+            onClick={closeContextMenu}
+          >
             <CloseIcon />
             Cancel
           </div>
@@ -1228,14 +1247,14 @@ export default function Editor({ id, newTab }) {
       {/* Bar Context Menu */}
       {barContextMenu.visible && (
         <div
-          className="bar-context-menu"
+          className="bar-context-menu fixed bg-surface border border-white/10 rounded-lg shadow-xl py-1 min-w-[160px] z-[100]"
           style={{
             top: `${barContextMenu.y}px`,
             left: `${barContextMenu.x}px`,
           }}
         >
           <div
-            className="menu-item"
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
             onClick={() => {
               duplicateBar(barContextMenu.barIndex);
               closeBarContextMenu();
@@ -1247,7 +1266,7 @@ export default function Editor({ id, newTab }) {
 
           {barRepeats[barContextMenu.barIndex] ? (
             <div
-              className="menu-item"
+              className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
               onClick={() => removeBarRepetition(barContextMenu.barIndex)}
             >
               <MinusIcon />
@@ -1255,7 +1274,7 @@ export default function Editor({ id, newTab }) {
             </div>
           ) : (
             <div
-              className="menu-item"
+              className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface hover:bg-white/5 transition-colors"
               onClick={() => openRepeatModal(barContextMenu.barIndex)}
             >
               <PlayIcon />
@@ -1263,9 +1282,11 @@ export default function Editor({ id, newTab }) {
             </div>
           )}
 
-          {/* Additional bar actions can be added here */}
-          <div className="divider"></div>
-          <div className="menu-item" onClick={closeBarContextMenu}>
+          <div className="h-px bg-white/10 my-1" />
+          <div
+            className="px-3 py-2 cursor-pointer flex items-center gap-2 text-sm text-on-surface-dim hover:bg-white/5 transition-colors"
+            onClick={closeBarContextMenu}
+          >
             <CloseIcon />
             Cancel
           </div>
@@ -1274,19 +1295,24 @@ export default function Editor({ id, newTab }) {
 
       {/* Repeat Modal */}
       {repeatModal.visible && (
-        <div className="modal-overlay">
-          <div className="repeat-modal">
-            <div className="modal-header">
-              <h3>Repeat Bars</h3>
-              <button className="close-btn" onClick={closeRepeatModal}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000] p-4">
+          <div className="bg-surface border border-white/10 rounded-xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto flex flex-col">
+            <div className="flex justify-between items-center p-4 border-b border-white/10">
+              <h3 className="text-lg font-semibold text-on-surface">Repeat Bars</h3>
+              <button
+                className="p-1 text-on-surface-dim hover:text-on-surface rounded-full hover:bg-white/5 transition-colors"
+                onClick={closeRepeatModal}
+              >
                 <CloseIcon />
               </button>
             </div>
 
-            <div className="modal-content">
-              <div className="repeat-form">
-                <div className="form-group">
-                  <label htmlFor="repetitions">Total Repetitions:</label>
+            <div className="p-4 flex-grow">
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="repetitions" className="block mb-2 font-medium text-on-surface text-sm">
+                    Total Repetitions:
+                  </label>
                   <input
                     id="repetitions"
                     type="number"
@@ -1308,23 +1334,27 @@ export default function Editor({ id, newTab }) {
                         ),
                       });
                     }}
-                    className="number-input"
+                    className="w-20 px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:border-primary"
                   />
-                  <p className="help-text">
+                  <p className="text-xs text-on-surface-dim mt-2">
                     The total count includes the first playthrough (2x means
                     play once, then repeat once).
                   </p>
                 </div>
 
-                <div className="form-group">
-                  <label>Bars to Repeat:</label>
-                  <div className="bar-selection">
+                <div>
+                  <label className="block mb-2 font-medium text-on-surface text-sm">Bars to Repeat:</label>
+                  <div className="flex flex-wrap gap-2 mb-2">
                     {Array(bars)
                       .fill(0)
                       .map((_, idx) => (
                         <button
                           key={idx}
-                          className={`bar-select-btn ${repeatModal.barsToRepeat.includes(idx) ? "selected" : ""}`}
+                          className={`w-9 h-9 border rounded-lg flex items-center justify-center font-medium text-sm transition-all
+                            ${repeatModal.barsToRepeat.includes(idx)
+                              ? 'bg-primary text-white border-primary'
+                              : 'bg-surface-light text-on-surface border-white/10 hover:border-primary'
+                            }`}
                           onClick={() => {
                             const newBars = repeatModal.barsToRepeat.includes(
                               idx,
@@ -1344,7 +1374,7 @@ export default function Editor({ id, newTab }) {
                         </button>
                       ))}
                   </div>
-                  <p className="help-text">
+                  <p className="text-xs text-on-surface-dim">
                     Select the bars you want to repeat. At least one bar must be
                     selected.
                   </p>
@@ -1352,12 +1382,15 @@ export default function Editor({ id, newTab }) {
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button className="cancel-btn" onClick={closeRepeatModal}>
+            <div className="p-4 border-t border-white/10 flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded-lg border border-white/10 text-on-surface-dim hover:bg-white/5 text-sm font-medium transition-colors"
+                onClick={closeRepeatModal}
+              >
                 Cancel
               </button>
               <button
-                className="apply-btn"
+                className="px-4 py-2 rounded-lg bg-primary text-white hover:bg-primary-light text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 onClick={setBarRepetition}
                 disabled={repeatModal.barsToRepeat.length === 0}
               >
