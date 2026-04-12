@@ -1,12 +1,8 @@
 import { useState, useEffect } from "preact/hooks";
 import { signOut } from "../../services/auth";
 import { tabStorage } from "../../services/storage";
-import "./styles.scss";
 import { useLocation } from "preact-iso";
-import MusicIcon from "../../assets/icons/MusicIcon.svg.jsx";
-import PlayIcon from "../../assets/icons/Play.svg.jsx";
-import EyeIcon from "../../assets/icons/Eye.svg.jsx";
-import EyeOffIcon from "../../assets/icons/EyeOff.svg.jsx";
+import { Icon } from "../../components/Icon";
 import {
   DndContext,
   closestCenter,
@@ -24,7 +20,6 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 
-// Sortable instrument component
 function SortableInstrumentItem({ instrument, index, onRemove }) {
   const {
     attributes,
@@ -46,26 +41,24 @@ function SortableInstrumentItem({ instrument, index, onRemove }) {
     <li
       ref={setNodeRef}
       style={style}
-      className={`flex items-center justify-between py-2 border-b border-gray-100 last:border-0 ${
-        isDragging ? "bg-indigo-50 rounded" : ""
+      className={`flex items-center justify-between py-2.5 px-3 border-b border-white/5 last:border-0 ${
+        isDragging ? "bg-primary/10 rounded-lg" : ""
       }`}
     >
-      <div 
-        className="flex items-center cursor-move" 
-        {...attributes} 
+      <div
+        className="flex items-center gap-2 cursor-move flex-1 min-w-0"
+        {...attributes}
         {...listeners}
       >
-        <svg viewBox="0 0 20 20" width="12" height="12" className="mr-2 text-gray-400">
-          <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z" fill="currentColor"></path>
-        </svg>
-        <span className="font-mono text-sm">{instrument}</span>
+        <Icon name="drag_indicator" size="text-lg" className="text-on-surface-dim shrink-0" />
+        <span className="font-mono text-sm text-on-surface truncate">{instrument}</span>
       </div>
       <button
         onClick={() => onRemove(index)}
-        className="text-red-500 hover:text-red-700 ml-2"
+        className="text-danger hover:text-red-400 ml-2 p-1 shrink-0"
         title="Remove"
       >
-        ×
+        <Icon name="close" size="text-lg" />
       </button>
     </li>
   );
@@ -92,34 +85,22 @@ export default function Settings() {
   const [apiKeysSaving, setApiKeysSaving] = useState(false);
   const [apiKeysSaveSuccess, setApiKeysSaveSuccess] = useState(false);
   const { route } = useLocation();
-  
-  // Set up sensors for drag and drop
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5, // Start dragging after moving 5px to avoid conflicts with click events
-      },
+      activationConstraint: { distance: 5 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     })
   );
 
-  // Available instruments to choose from
   const availableInstruments = [
-    "kick",
-    "snare",
-    "hihat",
-    "hihatOpen",
-    "tom",
-    "hiTom",
-    "floorTom",
-    "crash",
-    "cowbell",
+    "kick", "snare", "hihat", "hihatOpen", "tom", "hiTom",
+    "floorTom", "crash", "cowbell",
   ];
 
   useEffect(() => {
-    // Load saved instruments and playback settings when the component mounts
     const loadSettings = async () => {
       try {
         setIsLoading(true);
@@ -139,18 +120,15 @@ export default function Settings() {
 
     loadSettings();
   }, []);
-  
-  // Handler for saving playback settings
+
   const handlePlaybackSettingsChange = async (key, value) => {
     const newSettings = { ...playbackSettings, [key]: value };
     setPlaybackSettings(newSettings);
-    
+
     try {
       setIsSaving(true);
       setError(null);
-      
       const success = await tabStorage.savePlaybackSettings(newSettings);
-      
       if (success) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -165,14 +143,11 @@ export default function Settings() {
     }
   };
 
-  // Handler for saving API keys
   const handleSaveApiKeys = async () => {
     try {
       setApiKeysSaving(true);
       setError(null);
-
       const success = await tabStorage.saveSetting('apiKeys', apiKeys);
-
       if (success) {
         setApiKeysSaveSuccess(true);
         setTimeout(() => setApiKeysSaveSuccess(false), 3000);
@@ -203,7 +178,6 @@ export default function Settings() {
       setError("Please type 'delete' to confirm");
       return;
     }
-
     setError(null);
     setDeleteStep(2);
     setConfirmText("");
@@ -219,13 +193,8 @@ export default function Settings() {
     setError(null);
 
     try {
-      // First clear all local data
       localStorage.clear();
-
-      // Then sign out the user
       await signOut();
-
-      // Redirect to login page
       route("/login");
     } catch (error) {
       setError("Failed to delete account. Please try again.");
@@ -233,14 +202,11 @@ export default function Settings() {
     }
   };
 
-  // New handler functions for instrument management
   const handleSaveInstruments = async () => {
     try {
       setIsSaving(true);
-      setError(null); // Clear any previous errors
-
+      setError(null);
       const success = await tabStorage.saveUserInstruments(instruments);
-
       if (success) {
         setSaveSuccess(true);
         setTimeout(() => setSaveSuccess(false), 3000);
@@ -268,82 +234,74 @@ export default function Settings() {
     setInstruments(updatedInstruments);
   };
 
-  // Handler for when drag ends - update the instruments array
   const handleDragEnd = (event) => {
     const { active, over } = event;
-    
     if (active.id !== over.id) {
       setInstruments((instruments) => {
         const oldIndex = instruments.indexOf(active.id);
         const newIndex = instruments.indexOf(over.id);
-        
         return arrayMove(instruments, oldIndex, newIndex);
       });
     }
   };
 
-  return (
-    <div className="settings-container p-2 md:p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Settings</h1>
+  const LoadingSpinner = () => (
+    <div className="flex justify-center py-8">
+      <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary" />
+    </div>
+  );
 
-      {/* Drum Machine Settings Section */}
-      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <MusicIcon className="h-5 w-5 mr-2 text-indigo-600" />
+  return (
+    <div className="px-4 pt-6 pb-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-on-surface mb-6">Settings</h1>
+
+      {/* Drum Kit Section */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="music_note" size="text-xl" className="text-primary" />
           Drum Kit
         </h2>
 
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="spinner"></div>
-          </div>
-        ) : (
+        {isLoading ? <LoadingSpinner /> : (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Customize your drum kit by adding, removing, or reordering
-              instruments. Changes will apply to new beats you create.
+            <p className="text-sm text-on-surface-dim mb-3">
+              Customize your drum kit. Changes apply to new beats.
             </p>
 
-            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Current Instruments
-              </h3>
-              
-              <div className="mb-4 drag-container">
-                <p className="text-xs text-gray-500 mb-2 italic">
-                  Drag and drop to reorder instruments
-                </p>
-                
-                <DndContext 
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext
-                    items={instruments}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <ul className="mb-4">
-                      {instruments.map((instrument, index) => (
-                        <SortableInstrumentItem
-                          key={instrument}
-                          instrument={instrument}
-                          index={index}
-                          onRemove={handleRemoveInstrument}
-                        />
-                      ))}
-                    </ul>
-                  </SortableContext>
-                </DndContext>
-              </div>
+            <div className="bg-surface-light rounded-lg p-3 mb-3">
+              <p className="text-xs text-on-surface-dim mb-2">
+                Drag to reorder instruments
+              </p>
 
-              <div className="flex gap-2 mt-4">
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={instruments}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul className="mb-3">
+                    {instruments.map((instrument, index) => (
+                      <SortableInstrumentItem
+                        key={instrument}
+                        instrument={instrument}
+                        index={index}
+                        onRemove={handleRemoveInstrument}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+
+              <div className="flex gap-2">
                 <select
                   value={newInstrument}
                   onChange={(e) => setNewInstrument(e.target.value)}
-                  className="border border-gray-300 rounded-md p-2 text-sm flex-grow"
+                  className="bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-on-surface flex-1 min-w-0"
                 >
-                  <option value="">Select an instrument...</option>
+                  <option value="">Add instrument...</option>
                   {availableInstruments
                     .filter((inst) => !instruments.includes(inst))
                     .map((instrument) => (
@@ -354,10 +312,8 @@ export default function Settings() {
                 </select>
                 <button
                   onClick={handleAddInstrument}
-                  disabled={
-                    !newInstrument || instruments.includes(newInstrument)
-                  }
-                  className="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50"
+                  disabled={!newInstrument || instruments.includes(newInstrument)}
+                  className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50 shrink-0"
                 >
                   Add
                 </button>
@@ -365,17 +321,13 @@ export default function Settings() {
             </div>
 
             <div className="flex items-center justify-between">
-              <div>
-                {saveSuccess && (
-                  <span className="text-green-500 text-sm animate-fade-out">
-                    Settings saved successfully!
-                  </span>
-                )}
-                {error && <span className="text-red-500 text-sm">{error}</span>}
+              <div className="text-sm">
+                {saveSuccess && <span className="text-success">Saved!</span>}
+                {error && <span className="text-danger">{error}</span>}
               </div>
               <button
                 onClick={handleSaveInstruments}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 disabled={isSaving}
               >
                 {isSaving ? "Saving..." : "Save Changes"}
@@ -383,249 +335,199 @@ export default function Settings() {
             </div>
           </>
         )}
-      </div>
-      
-      {/* Playback Settings Section */}
-      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <PlayIcon className="h-5 w-5 mr-2 text-indigo-600" />
+      </section>
+
+      {/* Playback Section */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="play_circle" size="text-xl" className="text-primary" />
           Playback
         </h2>
 
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="spinner"></div>
-          </div>
-        ) : (
+        {isLoading ? <LoadingSpinner /> : (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Adjust how drum tracks play back in the editor.
-            </p>
+            <div className="space-y-4">
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={playbackSettings.countIn}
+                  onChange={(e) => handlePlaybackSettingsChange('countIn', e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/20 text-primary focus:ring-primary bg-surface-light"
+                />
+                <div>
+                  <span className="text-sm text-on-surface">Count-in before playing</span>
+                  <p className="text-xs text-on-surface-dim mt-0.5">
+                    Play a one-bar count-in before the track starts.
+                  </p>
+                </div>
+              </label>
 
-            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
-              <h3 className="text-sm font-medium text-gray-700 mb-2">
-                Playback Options
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="flex items-center">
-                  <input
-                    id="count-in"
-                    type="checkbox"
-                    checked={playbackSettings.countIn}
-                    onChange={(e) => handlePlaybackSettingsChange('countIn', e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                  <label htmlFor="count-in" className="ml-2 text-sm text-gray-700">
-                    Count-in before playing
-                    <p className="text-xs text-gray-500 mt-1">
-                      Play a one-bar count-in before the track starts.
-                    </p>
-                  </label>
+              <label className="flex items-start gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={playbackSettings.loopPlayback}
+                  onChange={(e) => handlePlaybackSettingsChange('loopPlayback', e.target.checked)}
+                  className="mt-1 h-4 w-4 rounded border-white/20 text-primary focus:ring-primary bg-surface-light"
+                />
+                <div>
+                  <span className="text-sm text-on-surface">Loop playback</span>
+                  <p className="text-xs text-on-surface-dim mt-0.5">
+                    Continue playing from the beginning when the track ends.
+                  </p>
                 </div>
-                
-                <div className="flex items-center">
-                  <input
-                    id="loop-playback"
-                    type="checkbox"
-                    checked={playbackSettings.loopPlayback}
-                    onChange={(e) => handlePlaybackSettingsChange('loopPlayback', e.target.checked)}
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  />
-                  <label htmlFor="loop-playback" className="ml-2 text-sm text-gray-700">
-                    Loop playback
-                    <p className="text-xs text-gray-500 mt-1">
-                      Continue playing from the beginning when the track ends.
-                    </p>
-                  </label>
-                </div>
-              </div>
+              </label>
             </div>
           </>
         )}
-      </div>
+      </section>
 
       {/* API Keys Section */}
-      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2 text-indigo-600"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="key" size="text-xl" className="text-primary" />
           API Keys
         </h2>
 
-        {isLoading ? (
-          <div className="flex justify-center p-4">
-            <div className="spinner"></div>
-          </div>
-        ) : (
+        {isLoading ? <LoadingSpinner /> : (
           <>
-            <p className="text-sm text-gray-600 mb-4">
-              Configure API keys for AI-powered features. Keys are stored in
-              your account and never shared.
+            <p className="text-sm text-on-surface-dim mb-3">
+              Configure API keys for AI-powered features.
             </p>
 
-            <div className="mb-4 bg-gray-50 p-4 rounded-md border border-gray-200">
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="openai-key"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+            <div className="space-y-3 mb-3">
+              <div>
+                <label htmlFor="openai-key" className="block text-sm text-on-surface-dim mb-1">
+                  OpenAI API Key
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="openai-key"
+                    type={showOpenaiKey ? 'text' : 'password'}
+                    value={apiKeys.openaiKey}
+                    onChange={(e) => setApiKeys({ ...apiKeys, openaiKey: e.target.value })}
+                    placeholder="sk-..."
+                    className="flex-1 min-w-0 px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm font-mono placeholder-on-surface-dim/50 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowOpenaiKey(!showOpenaiKey)}
+                    className="px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface-dim hover:text-on-surface shrink-0"
                   >
-                    OpenAI API Key
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="openai-key"
-                      type={showOpenaiKey ? 'text' : 'password'}
-                      value={apiKeys.openaiKey}
-                      onChange={(e) =>
-                        setApiKeys({ ...apiKeys, openaiKey: e.target.value })
-                      }
-                      placeholder="sk-..."
-                      className="border border-gray-300 rounded-md p-2 text-sm flex-grow font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowOpenaiKey(!showOpenaiKey)}
-                      className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 text-gray-600"
-                      title={showOpenaiKey ? 'Hide key' : 'Show key'}
-                    >
-                      <span className="h-4 w-4 block">
-                        {showOpenaiKey ? <EyeOffIcon /> : <EyeIcon />}
-                      </span>
-                    </button>
-                  </div>
+                    <Icon name={showOpenaiKey ? 'visibility_off' : 'visibility'} size="text-lg" />
+                  </button>
                 </div>
+              </div>
 
-                <div>
-                  <label
-                    htmlFor="anthropic-key"
-                    className="block text-sm font-medium text-gray-700 mb-1"
+              <div>
+                <label htmlFor="anthropic-key" className="block text-sm text-on-surface-dim mb-1">
+                  Anthropic API Key
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="anthropic-key"
+                    type={showAnthropicKey ? 'text' : 'password'}
+                    value={apiKeys.anthropicKey}
+                    onChange={(e) => setApiKeys({ ...apiKeys, anthropicKey: e.target.value })}
+                    placeholder="sk-ant-..."
+                    className="flex-1 min-w-0 px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm font-mono placeholder-on-surface-dim/50 focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowAnthropicKey(!showAnthropicKey)}
+                    className="px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface-dim hover:text-on-surface shrink-0"
                   >
-                    Anthropic API Key
-                  </label>
-                  <div className="flex gap-2">
-                    <input
-                      id="anthropic-key"
-                      type={showAnthropicKey ? 'text' : 'password'}
-                      value={apiKeys.anthropicKey}
-                      onChange={(e) =>
-                        setApiKeys({ ...apiKeys, anthropicKey: e.target.value })
-                      }
-                      placeholder="sk-ant-..."
-                      className="border border-gray-300 rounded-md p-2 text-sm flex-grow font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowAnthropicKey(!showAnthropicKey)}
-                      className="px-3 py-2 border border-gray-300 rounded-md hover:bg-gray-100 text-gray-600"
-                      title={showAnthropicKey ? 'Hide key' : 'Show key'}
-                    >
-                      <span className="h-4 w-4 block">
-                        {showAnthropicKey ? <EyeOffIcon /> : <EyeIcon />}
-                      </span>
-                    </button>
-                  </div>
+                    <Icon name={showAnthropicKey ? 'visibility_off' : 'visibility'} size="text-lg" />
+                  </button>
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between">
-              <div>
-                {apiKeysSaveSuccess && (
-                  <span className="text-green-500 text-sm animate-fade-out">
-                    API keys saved successfully!
-                  </span>
-                )}
-                {error && <span className="text-red-500 text-sm">{error}</span>}
+              <div className="text-sm">
+                {apiKeysSaveSuccess && <span className="text-success">Saved!</span>}
+                {error && <span className="text-danger">{error}</span>}
               </div>
               <button
                 onClick={handleSaveApiKeys}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50"
                 disabled={apiKeysSaving}
               >
                 {apiKeysSaving ? 'Saving...' : 'Save Keys'}
               </button>
             </div>
 
-            <p className="text-xs text-gray-500 mt-3 italic">
+            <p className="text-xs text-on-surface-dim mt-2">
               Keys are stored in your account and never shared.
             </p>
           </>
         )}
-      </div>
+      </section>
 
-      {/* Account Management Section */}
-      <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4 flex items-center">
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            className="h-5 w-5 mr-2 text-indigo-600"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-          >
-            <path
-              fillRule="evenodd"
-              d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
-              clipRule="evenodd"
-            />
-          </svg>
+      {/* Help Link */}
+      <a
+        href="/help"
+        className="flex items-center justify-between bg-surface rounded-xl p-4 mb-4 hover:bg-surface-light transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Icon name="help" size="text-xl" className="text-primary" />
+          <span className="text-on-surface font-medium">Help & Support</span>
+        </div>
+        <Icon name="chevron_right" size="text-xl" className="text-on-surface-dim" />
+      </a>
+
+      {/* Account / Danger Zone */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="person" size="text-xl" className="text-primary" />
           Account
         </h2>
 
-        <div className="bg-red-50 rounded-md p-4 mt-6 border border-red-100">
-          <h3 className="text-lg font-medium text-red-700 mb-2">Danger Zone</h3>
-          <p className="text-sm text-red-600 mb-4">
-            Once you delete your account, there is no going back. This is a
-            permanent action.
+        <div className="bg-danger/10 border border-danger/20 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-danger mb-1">Danger Zone</h3>
+          <p className="text-xs text-danger/80 mb-3">
+            Once you delete your account, there is no going back.
           </p>
           <button
             onClick={openDeleteModal}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+            className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium hover:bg-red-500 active:scale-95 transition-all"
           >
             Delete Account
           </button>
         </div>
-      </div>
+      </section>
+
+      {/* Sign Out */}
+      <button
+        onClick={() => { signOut(); route('/login'); }}
+        className="w-full py-3 bg-surface rounded-xl text-on-surface-dim text-sm font-medium hover:bg-surface-light transition-colors mb-4"
+      >
+        Sign Out
+      </button>
 
       {/* Delete Account Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 shadow-xl">
-            <h3 className="text-xl font-bold text-red-600 mb-4">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-surface rounded-2xl max-w-sm w-full p-6 shadow-xl">
+            <h3 className="text-lg font-bold text-danger mb-3">
               {deleteStep === 1 ? "Delete Account" : "Final Confirmation"}
             </h3>
 
             {deleteStep === 1 ? (
               <>
-                <p className="mb-6 text-gray-700">
-                  Are you sure you want to delete your account? This action is
-                  permanent and cannot be undone. All your beats and settings
-                  will be lost.
+                <p className="text-sm text-on-surface-dim mb-4">
+                  This action is permanent and cannot be undone. All your beats and settings will be lost.
                 </p>
-                <p className="text-sm font-medium text-gray-900 mb-2">
+                <p className="text-sm text-on-surface mb-2">
                   Type "delete" to confirm:
                 </p>
               </>
             ) : (
               <>
-                <p className="mb-6 text-gray-700">
-                  <strong className="text-red-600">Final warning:</strong> You
-                  are about to permanently delete your account and all
-                  associated data. This action cannot be reversed.
+                <p className="text-sm text-on-surface-dim mb-4">
+                  <strong className="text-danger">Final warning:</strong> You are about to permanently delete your account and all associated data.
                 </p>
-                <p className="text-sm font-medium text-gray-900 mb-2">
-                  Type "confirm delete" to permanently delete your account:
+                <p className="text-sm text-on-surface mb-2">
+                  Type "confirm delete" to proceed:
                 </p>
               </>
             )}
@@ -634,20 +536,18 @@ export default function Settings() {
               type="text"
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-red-500 focus:border-red-500 mb-4"
-              placeholder={
-                deleteStep === 1 ? "Type 'delete'" : "Type 'confirm delete'"
-              }
+              className="w-full px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-danger mb-3"
+              placeholder={deleteStep === 1 ? "Type 'delete'" : "Type 'confirm delete'"}
               disabled={isDeleting}
             />
 
-            {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+            {error && <p className="text-danger text-xs mb-3">{error}</p>}
 
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end gap-2">
               <button
                 onClick={closeDeleteModal}
                 disabled={isDeleting}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors"
+                className="px-4 py-2 bg-surface-light text-on-surface rounded-lg text-sm hover:bg-white/10"
               >
                 Cancel
               </button>
@@ -656,7 +556,7 @@ export default function Settings() {
                 <button
                   onClick={proceedToFinalConfirmation}
                   disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                  className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium"
                 >
                   Continue
                 </button>
@@ -664,29 +564,13 @@ export default function Settings() {
                 <button
                   onClick={handleDeleteAccount}
                   disabled={isDeleting}
-                  className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+                  className="px-4 py-2 bg-danger text-white rounded-lg text-sm font-medium flex items-center gap-2"
                 >
                   {isDeleting ? (
                     <>
-                      <svg
-                        className="animate-spin h-4 w-4 mr-2"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                       </svg>
                       Deleting...
                     </>

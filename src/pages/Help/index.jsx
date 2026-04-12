@@ -1,33 +1,24 @@
 import { useState } from "preact/hooks";
-import QuestionMarkIcon from "../../assets/icons/QuestionMark.svg.jsx";
-import AlertIcon from "../../assets/icons/AlertIcon.svg.jsx";
-import SuccessIcon from "../../assets/icons/Success.svg.jsx";
-import ChevronDown2Icon from "../../assets/icons/ChevronDown2.svg.jsx";
-import "./styles.scss";
+import { Icon } from "../../components/Icon";
 
 export default function Help() {
-  // const [formData, setFormData] = useState({
-  //   name: "",
-  //   email: "",
-  //   issueType: "bug",
-  //   description: "",
-  // });
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [expandedItems, setExpandedItems] = useState({});
 
   const handleSubmit = async (event) => {
     event.preventDefault();
     setSubmitSuccess(true);
   };
 
-  // FAQ data organized in sections
   const faqSections = [
     {
       title: "Getting Started",
+      icon: "rocket_launch",
       items: [
         {
           question: "How do I create a new beat?",
           answer:
-            "Click on 'New Dab' in the sidebar or the 'Create New Beat' button on the main page. This will open the editor with a blank pattern where you can start creating your beat.",
+            "Click on 'New Beat' in the bottom nav or the 'Create New Beat' button on the main page. This will open the editor with a blank pattern where you can start creating your beat.",
         },
         {
           question: "How do I play my beat?",
@@ -37,12 +28,13 @@ export default function Help() {
         {
           question: "How do I save my work?",
           answer:
-            "Click the 'Save' button in the top right corner of the editor. Your beat will be saved automatically and will appear in your Tab List. You can also give your beat a name by editing the title field at the top of the editor.",
+            "Click the 'Save' button in the editor. Your beat will be saved and appear in your beat list. You can also give your beat a name by editing the title field at the top of the editor.",
         },
       ],
     },
     {
       title: "Working with Patterns",
+      icon: "grid_on",
       items: [
         {
           question: "How do I add a drum hit?",
@@ -57,91 +49,58 @@ export default function Help() {
         {
           question: "How do I change the time signature or add more bars?",
           answer:
-            "Click 'Show Advanced Controls' to access the time signature settings and bar count controls. You can change the time signature (e.g., 4/4, 3/4) and add more bars to extend your pattern. Note that changing these settings will resize your pattern, but will try to preserve existing beats.",
+            "Click 'Show Advanced Controls' to access the time signature settings and bar count controls. You can change the time signature (e.g., 4/4, 3/4) and add more bars to extend your pattern.",
         },
         {
           question: "How do I duplicate or repeat bars?",
           answer:
-            "Click on the bar number at the beginning of any bar to open the bar options menu. From there, you can choose to duplicate the bar (which adds a copy right after it) or set up repetitions. When setting repetitions, you can specify how many times to play the bar and which bars to include in the repeat.",
-        },
-        {
-          question: "How do I work with tracks and instruments?",
-          answer:
-            "Click on an instrument icon at the beginning of a row to access track options. You can hide specific tracks, solo a track (hide all others), or show all tracks. This is useful when working with complex patterns to focus on specific instruments.",
-        },
-      ],
-    },
-    {
-      title: "Advanced Features",
-      items: [
-        {
-          question: "What are the playback settings?",
-          answer:
-            "In the Settings page under the Playback section, you can customize how your beats play back. The Count-in setting plays a one-bar metronome click before starting the actual pattern. The Loop Playback setting determines whether your beat will loop continuously or stop after playing through once.",
-        },
-        {
-          question: "How do I customize my drum kit?",
-          answer:
-            "Go to the Settings page and look for the Drum Kit section. Here you can add, remove, and reorder instruments by dragging them. Your customized kit will be used for all new beats you create.",
-        },
-        {
-          question:
-            "Can I create complex patterns with different time signatures?",
-          answer:
-            "Yes! Use the Advanced Controls section in the editor to change the time signature. You can create patterns in common time signatures like 4/4 and 3/4, or experiment with more unusual ones like 5/4 or 7/8.",
+            "Click on the bar number at the beginning of any bar to open the bar options menu. From there, you can choose to duplicate the bar or set up repetitions.",
         },
         {
           question: "How do hi-hats work in the editor?",
           answer:
-            "The hi-hat track is special - clicking a cell cycles through three states: off, closed hi-hat, and open hi-hat. This allows you to create more dynamic hi-hat patterns with both closed and open sounds in a single track.",
+            "The hi-hat track is special — clicking a cell cycles through three states: off, closed hi-hat, and open hi-hat. This allows you to create more dynamic hi-hat patterns with both closed and open sounds in a single track.",
         },
       ],
     },
     {
       title: "Managing Your Beats",
+      icon: "library_music",
       items: [
         {
           question: "How do I view all my saved beats?",
           answer:
-            "Click on 'Tab List' in the sidebar to see all your saved beats. You can switch between grid and list views using the view toggle button.",
+            "Tap the Home tab in the bottom nav to see all your saved beats. You can switch between grid and list views.",
         },
         {
           question: "Can I delete a beat?",
           answer:
-            "Yes, in the Tab List view, click the delete icon (trash can) next to any beat. You'll need to confirm deletion by clicking the icon again.",
+            "Yes, in the beat list, tap the delete icon next to any beat. You'll need to confirm deletion by tapping again.",
         },
         {
           question: "Is my data backed up?",
           answer:
-            "Your beats are stored in your Supabase account when you're logged in. This means you can access them from any device by logging into your account. Always save your work to ensure it's properly stored in the cloud.",
+            "Your beats are stored in your account when you're logged in. You can access them from any device by logging in.",
         },
       ],
     },
     {
-      title: "Technical Issues",
+      title: "Troubleshooting",
+      icon: "build",
       items: [
-        {
-          question: "What browsers are supported?",
-          answer:
-            "Dabber works best on modern browsers like Chrome, Firefox, Safari, and Edge. It requires Web Audio API support, which most modern browsers have.",
-        },
         {
           question: "No sound is playing. What should I do?",
           answer:
-            "First, check if your device's sound is on and at an audible level. If that's not the issue, try clicking anywhere on the page first (this is needed for audio to work in some browsers). If problems persist, try using a different browser or device.",
+            "First, check if your device's sound is on. If that's not the issue, try tapping anywhere on the page first (this is needed for audio to work in some browsers). If problems persist, try a different browser.",
         },
         {
-          question:
-            "The app feels slow or lags during playback. How can I fix that?",
+          question: "The app feels slow during playback.",
           answer:
-            "For complex patterns or on older devices, you might experience performance issues. Try reducing the number of bars or the note resolution. Close other tabs and applications to free up system resources.",
+            "For complex patterns, try reducing the number of bars or closing other tabs/apps to free up resources.",
         },
       ],
     },
   ];
-
-  // Toggle FAQ item
-  const [expandedItems, setExpandedItems] = useState({});
 
   const toggleItem = (sectionIndex, itemIndex) => {
     const key = `${sectionIndex}-${itemIndex}`;
@@ -152,180 +111,124 @@ export default function Help() {
   };
 
   return (
-    <div className="help-container p-2 md:p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Help & Support</h1>
+    <div className="px-4 pt-6 pb-4 max-w-2xl mx-auto">
+      <h1 className="text-2xl font-bold text-on-surface mb-6">Help & Support</h1>
 
-      {/* Help intro */}
-      <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
-        <h2 className="text-xl font-semibold mb-3">Welcome to Dabber Help</h2>
-        <p className="text-gray-700 mb-4">
-          Dabber is a browser-based drum machine that lets you create,
-          customize, and save beat patterns. Use the sections below to find
-          answers to common questions or report an issue.
+      {/* Quick Start */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3">Quick Start</h2>
+        <p className="text-sm text-on-surface-dim mb-3">
+          Drum Dabber is a browser-based drum machine for creating and saving beat patterns.
         </p>
-
-        <div className="bg-indigo-50 border border-indigo-100 rounded-md p-4 mb-4">
-          <h3 className="text-md font-medium text-indigo-800 mb-2">
-            Quick Start Guide
-          </h3>
-          <ul className="list-disc list-inside text-indigo-700 space-y-1 text-sm">
-            <li>Click cells in the grid to add drum sounds</li>
-            <li>Use the Play button to hear your beat</li>
-            <li>Click bar numbers to duplicate or repeat bars</li>
-            <li>Click instrument icons to show/hide tracks</li>
-            <li>
-              Check the Settings page for playback options and custom drum kits
+        <div className="bg-primary/10 border border-primary/20 rounded-lg p-3">
+          <ul className="space-y-1.5 text-sm text-on-surface">
+            <li className="flex items-start gap-2">
+              <Icon name="touch_app" size="text-base" className="text-primary mt-0.5 shrink-0" />
+              Tap cells in the grid to add drum sounds
             </li>
-            <li>Save your work with the Save button in the editor</li>
+            <li className="flex items-start gap-2">
+              <Icon name="play_arrow" size="text-base" className="text-primary mt-0.5 shrink-0" />
+              Use the Play button to hear your beat
+            </li>
+            <li className="flex items-start gap-2">
+              <Icon name="save" size="text-base" className="text-primary mt-0.5 shrink-0" />
+              Save your work with the Save button
+            </li>
+            <li className="flex items-start gap-2">
+              <Icon name="settings" size="text-base" className="text-primary mt-0.5 shrink-0" />
+              Customize your kit in Settings
+            </li>
           </ul>
         </div>
+      </section>
 
-        <div className="flex flex-wrap gap-4 mt-6">
-          <a
-            href="#faq"
-            className="px-4 py-2 bg-indigo-100 text-indigo-700 rounded-md hover:bg-indigo-200 transition-colors flex items-center gap-2"
-          >
-            <QuestionMarkIcon />
-            Browse FAQ
-          </a>
-          <a
-            href="#report"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors flex items-center gap-2"
-          >
-            <AlertIcon />
-            Report an Issue
-          </a>
-        </div>
-      </div>
+      {/* FAQ Sections */}
+      {faqSections.map((section, sectionIndex) => (
+        <section key={sectionIndex} className="bg-surface rounded-xl p-4 mb-4">
+          <h2 className="text-base font-semibold text-on-surface mb-3 flex items-center gap-2">
+            <Icon name={section.icon} size="text-lg" className="text-primary" />
+            {section.title}
+          </h2>
 
-      {/* FAQ Section */}
-      <div
-        id="faq"
-        className="faq-section bg-white rounded-lg shadow-sm p-6 mb-8"
-      >
-        <h2 className="text-2xl font-semibold mb-6">
-          Frequently Asked Questions
-        </h2>
+          <div className="space-y-1">
+            {section.items.map((item, itemIndex) => {
+              const isExpanded = expandedItems[`${sectionIndex}-${itemIndex}`];
 
-        <div className="accordion">
-          {faqSections.map((section, sectionIndex) => (
-            <div key={sectionIndex} className="mb-6">
-              <h3 className="text-lg font-medium text-indigo-700 mb-3">
-                {section.title}
-              </h3>
-
-              {section.items.map((item, itemIndex) => {
-                const isExpanded =
-                  expandedItems[`${sectionIndex}-${itemIndex}`];
-
-                return (
-                  <div
-                    key={itemIndex}
-                    className="faq-item mb-2 border border-gray-200 rounded-md overflow-hidden"
+              return (
+                <div key={itemIndex} className="border border-white/5 rounded-lg overflow-hidden">
+                  <button
+                    className={`w-full text-left px-3 py-3 flex justify-between items-center text-sm ${
+                      isExpanded ? "bg-surface-light" : "hover:bg-surface-light/50"
+                    } transition-colors`}
+                    onClick={() => toggleItem(sectionIndex, itemIndex)}
+                    aria-expanded={isExpanded}
                   >
-                    <button
-                      className={`w-full text-left p-4 flex justify-between items-center hover:bg-gray-50 transition-colors ${isExpanded ? "bg-gray-50" : ""}`}
-                      onClick={() => toggleItem(sectionIndex, itemIndex)}
-                      aria-expanded={isExpanded}
-                    >
-                      <span className="font-medium">{item.question}</span>
-                      <span
-                        className={`transform transition-transform ${isExpanded ? "rotate-180" : ""} inline-block`}
-                      >
-                        <ChevronDown2Icon />
-                      </span>
-                    </button>
+                    <span className="text-on-surface font-medium pr-2">{item.question}</span>
+                    <Icon
+                      name="expand_more"
+                      size="text-lg"
+                      class={`text-on-surface-dim shrink-0 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                    />
+                  </button>
 
-                    <div
-                      className={`faq-answer transition-all overflow-hidden ${isExpanded ? "max-h-96 visible" : "max-h-0 invisible"}`}
-                    >
-                      <div className="p-4 pt-0 text-gray-700 border-t border-gray-100">
-                        {item.answer}
-                      </div>
+                  {isExpanded && (
+                    <div className="px-3 pb-3 text-sm text-on-surface-dim leading-relaxed border-t border-white/5">
+                      <div className="pt-2">{item.answer}</div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-        </div>
-
-        <div className="text-center mt-8">
-          <p className="text-gray-600">
-            Can't find an answer to your question?{" "}
-            <a href="#report" className="text-indigo-600 hover:underline">
-              Report an issue or ask for help
-            </a>
-          </p>
-        </div>
-      </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      ))}
 
       {/* Issue Report Form */}
-      <div
-        id="report"
-        className="issue-report bg-white rounded-lg shadow-sm p-6"
-      >
-        <h2 className="text-2xl font-semibold mb-4">Report an Issue</h2>
-        <p className="text-gray-700 mb-6">
-          Encountered a bug or have a feature request? Let us know by filling
-          out the form below.
-        </p>
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="bug_report" size="text-xl" className="text-primary" />
+          Report an Issue
+        </h2>
 
         {submitSuccess ? (
-          <div className="success-message bg-green-100 text-green-700 p-4 rounded-md mb-6 flex items-start">
-            <SuccessIcon />
+          <div className="bg-success/10 border border-success/20 text-success p-3 rounded-lg text-sm flex items-start gap-2">
+            <Icon name="check_circle" size="text-lg" className="shrink-0 mt-0.5" />
             <div>
               <p className="font-medium">Thanks for your feedback!</p>
-              <p>We've received your issue report and will look into it.</p>
+              <p className="text-success/80">We've received your report and will look into it.</p>
             </div>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4" netlify>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Your Name
-                </label>
+                <label htmlFor="name" className="block text-xs text-on-surface-dim mb-1">Your Name</label>
                 <input
                   type="text"
                   id="name"
                   name="name"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
-
               <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700 mb-1"
-                >
-                  Email Address
-                </label>
+                <label htmlFor="email" className="block text-xs text-on-surface-dim mb-1">Email</label>
                 <input
                   type="email"
                   id="email"
                   name="email"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
                   required
                 />
               </div>
             </div>
 
             <div>
-              <label
-                htmlFor="issueType"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Issue Type
-              </label>
+              <label htmlFor="issueType" className="block text-xs text-on-surface-dim mb-1">Issue Type</label>
               <select
                 id="issueType"
                 name="issueType"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary"
               >
                 <option value="bug">Bug Report</option>
                 <option value="feature">Feature Request</option>
@@ -335,52 +238,26 @@ export default function Help() {
             </div>
 
             <div>
-              <label
-                htmlFor="description"
-                className="block text-sm font-medium text-gray-700 mb-1"
-              >
-                Description
-              </label>
+              <label htmlFor="description" className="block text-xs text-on-surface-dim mb-1">Description</label>
               <textarea
                 id="description"
                 name="description"
-                rows="5"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Please describe the issue in detail. For bugs, include steps to reproduce, what happened, and what you expected to happen."
+                rows="4"
+                className="w-full px-3 py-2 bg-surface-light border border-white/10 rounded-lg text-on-surface text-sm focus:outline-none focus:ring-2 focus:ring-primary resize-none"
+                placeholder="Describe the issue in detail..."
                 required
-              ></textarea>
+              />
             </div>
 
-            <div className="flex items-center">
-              <button
-                type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 flex items-center"
-              >
-                Submit Report
-              </button>
-              <p className="text-xs text-gray-500 ml-4">
-                We typically respond within 1-2 business days.
-              </p>
-            </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium active:scale-95 transition-transform"
+            >
+              Submit Report
+            </button>
           </form>
         )}
-      </div>
-
-      {/* Additional Resources */}
-      <div className="mt-8 text-center text-sm text-gray-600">
-        <p>Need more help? Check out these resources:</p>
-        <div className="flex justify-center mt-2 space-x-4">
-          <a href="#" className="text-indigo-600 hover:underline">
-            Video Tutorials
-          </a>
-          <a href="#" className="text-indigo-600 hover:underline">
-            User Guide
-          </a>
-          <a href="#" className="text-indigo-600 hover:underline">
-            Community Forum
-          </a>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }
