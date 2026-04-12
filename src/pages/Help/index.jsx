@@ -152,8 +152,8 @@ export default function Help() {
   };
 
   return (
-    <div className="help-container p-4 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Help & Support</h1>
+    <div className="help-container p-2 md:p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Help & Support</h1>
 
       {/* Help intro */}
       <div className="bg-white rounded-lg shadow-sm p-6 mb-8">

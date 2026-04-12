@@ -1,0 +1,42 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - textbox "Untitled Beat" [ref=e8]: New Beat
+      - button [disabled] [ref=e10]:
+        - img [ref=e11]
+    - generic [ref=e13]:
+      - button [disabled] [ref=e14]:
+        - img [ref=e15]
+      - generic [ref=e17]:
+        - generic [ref=e18]: BPM
+        - spinbutton "BPM" [ref=e19]: "120"
+      - generic [ref=e20]:
+        - generic [ref=e21]: Bars
+        - generic [ref=e22]:
+          - button [disabled] [ref=e23]:
+            - img [ref=e24]
+          - generic [ref=e26]: "1"
+          - button [ref=e27]:
+            - img [ref=e28]
+      - button "More" [ref=e30]:
+        - generic [ref=e31]: More
+        - img [ref=e33]
+    - paragraph [ref=e37]: Loading drum samples...
+  - navigation [ref=e38]:
+    - generic [ref=e39]:
+      - link "New" [ref=e40] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e42]
+        - text: New
+      - link "Beats" [ref=e44] [cursor=pointer]:
+        - /url: /
+        - img [ref=e46]
+        - text: Beats
+      - link "Settings" [ref=e48] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e50]
+        - text: Settings
+      - link "Help" [ref=e53] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e55]
+        - text: Help

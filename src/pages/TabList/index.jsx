@@ -82,11 +82,11 @@ export default function TabList() {
   };
 
   return (
-    <div className="tab-list-container p-4">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Your Beats</h1>
+    <div className="tab-list-container p-2 md:p-4">
+      <div className="flex justify-between items-center mb-4 md:mb-6">
+        <h1 className="text-xl md:text-2xl font-bold">Your Beats</h1>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 md:gap-3">
           {/* View toggle button */}
           <button
             onClick={toggleViewMode}
@@ -100,10 +100,10 @@ export default function TabList() {
           {/* Create new tab button */}
           <a
             href="/editor/new"
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 flex items-center gap-2"
+            className="px-3 py-2 md:px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 flex items-center gap-1.5 text-sm md:text-base"
           >
             <PlusIcon />
-            Create New Beat
+            <span className="hidden sm:inline">Create New</span> Beat
           </a>
         </div>
       </div>

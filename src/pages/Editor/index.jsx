@@ -945,8 +945,8 @@ export default function Editor({ id, newTab }) {
   return (
     <div className="editor-container p-4">
       {/* Header with title input and save button */}
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center relative grow max-w-[calc(100%-80px)] sm:max-w-[calc(100%-100px)]">
+      <div className="flex justify-between items-center mb-3 md:mb-6 gap-2">
+        <div className="flex items-center relative grow min-w-0">
           <input
             ref={nameInputRef}
             type="text"
@@ -954,19 +954,19 @@ export default function Editor({ id, newTab }) {
             onChange={handleNameChange}
             onFocus={() => setIsNameFocused(true)}
             onBlur={handleNameBlur}
-            className={`text-xl sm:text-2xl font-bold bg-transparent border-b-2 transition-colors px-2 py-1 w-full focus:outline-none truncate ${
+            className={`text-lg md:text-2xl font-bold bg-transparent border-b-2 transition-colors px-1 md:px-2 py-1 w-full focus:outline-none truncate ${
               isNameFocused ? "border-indigo-500" : "border-gray-300"
             }`}
             placeholder="Untitled Beat"
           />
           {isNameFocused && (
-            <div className="absolute -bottom-6 left-2 text-xs text-gray-500">
+            <div className="absolute -bottom-5 left-1 text-xs text-gray-500 hidden md:block">
               Press Enter or click outside to save name
             </div>
           )}
         </div>
 
-        <div className="flex items-center shrink-0 ml-2">
+        <div className="flex items-center shrink-0">
           {saveSuccess && (
             <span className="text-green-500 mr-3 animate-fade-out hidden sm:inline">
               Saved successfully!
@@ -975,19 +975,19 @@ export default function Editor({ id, newTab }) {
           <button
             onClick={() => saveTab(true)}
             disabled={isSaving || !isLoaded}
-            className="px-3 sm:px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-2 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
+            className="p-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 flex items-center gap-1.5 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 whitespace-nowrap"
           >
             {isSaving ? (
               <>
                 <span className="text-white">
                   <SpinnerIcon />
                 </span>
-                <span className="sm:inline">Saving...</span>
+                <span className="hidden md:inline">Saving...</span>
               </>
             ) : (
               <>
                 <SaveIcon />
-                <span>Save</span>
+                <span className="hidden md:inline">Save</span>
               </>
             )}
           </button>
@@ -995,28 +995,28 @@ export default function Editor({ id, newTab }) {
       </div>
 
       {/* Basic Controls */}
-      <div className="controls flex flex-wrap items-center mb-4 gap-y-3 gap-x-4 p-4 bg-gray-50 rounded-lg">
+      <div className="controls flex flex-wrap items-center mb-2 md:mb-4 gap-y-2 gap-x-2 md:gap-x-4 md:gap-y-3 p-2 md:p-4 bg-gray-50 rounded-lg">
         <button
           onClick={togglePlayback}
           disabled={!isLoaded}
-          className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 flex items-center gap-2"
+          className="p-2 md:px-4 md:py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 active:transform active:translate-y-0.5 active:bg-opacity-90 disabled:opacity-50 flex items-center gap-1.5"
         >
           {isPlaying ? (
             <>
               <StopIcon />
-              Stop
+              <span className="hidden md:inline">Stop</span>
             </>
           ) : (
             <>
               <PlayIcon />
-              Play
+              <span className="hidden md:inline">Play</span>
             </>
           )}
         </button>
 
-        <div className="flex items-center gap-2">
-          <label htmlFor="bpm-input" className="font-medium text-gray-700">
-            BPM:
+        <div className="flex items-center gap-1.5">
+          <label htmlFor="bpm-input" className="text-sm font-medium text-gray-700">
+            BPM
           </label>
           <input
             id="bpm-input"
@@ -1026,27 +1026,28 @@ export default function Editor({ id, newTab }) {
             value={bpm}
             onChange={(e) => setBpm(e.target.value)}
             onBlur={handleBpmBlur}
-            className="w-16 p-1 border border-gray-300 rounded text-center"
+            className="w-14 p-1 border border-gray-300 rounded text-center text-sm"
           />
         </div>
+
         {/* Bar Count Controls */}
-        <div className="bars-control flex items-center gap-2">
-          <label className="text-sm text-gray-600">Bars:</label>
+        <div className="bars-control flex items-center gap-1.5">
+          <label className="text-sm text-gray-600">Bars</label>
           <div className="flex items-center border border-gray-300 rounded-md">
             <button
               onClick={() => handleBarCountChange(-1)}
               disabled={bars <= 1}
-              className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+              className="px-1.5 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
             >
               <MinusIcon />
             </button>
-            <span className="px-3 py-1 border-l border-r border-gray-300 min-w-[30px] text-center">
+            <span className="px-2 py-1 border-l border-r border-gray-300 min-w-[24px] text-center text-sm">
               {bars}
             </span>
             <button
               onClick={() => handleBarCountChange(1)}
               disabled={bars >= MAX_BAR_COUNT}
-              className="px-2 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
+              className="px-1.5 py-1 hover:bg-gray-100 focus:outline-none disabled:opacity-50 disabled:hover:bg-transparent"
             >
               <PlusIcon />
             </button>
@@ -1055,9 +1056,10 @@ export default function Editor({ id, newTab }) {
 
         <button
           onClick={() => setShowAdvancedControls(!showAdvancedControls)}
-          className="text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-sm md:ml-auto w-full md:w-auto"
+          className="text-gray-600 hover:text-indigo-600 flex items-center gap-1 text-xs md:text-sm md:ml-auto"
         >
-          {showAdvancedControls ? "Hide" : "Show"} Advanced Controls
+          <span className="hidden md:inline">{showAdvancedControls ? "Hide" : "Show"} Advanced Controls</span>
+          <span className="md:hidden">More</span>
           <span
             className={`transition-transform ${showAdvancedControls ? "rotate-180" : ""} inline-block`}
           >

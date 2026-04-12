@@ -1,0 +1,147 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - heading "Help & Support" [level=1] [ref=e6]
+    - generic [ref=e7]:
+      - heading "Welcome to Dabber Help" [level=2] [ref=e8]
+      - paragraph [ref=e9]: Dabber is a browser-based drum machine that lets you create, customize, and save beat patterns. Use the sections below to find answers to common questions or report an issue.
+      - generic [ref=e10]:
+        - heading "Quick Start Guide" [level=3] [ref=e11]
+        - list [ref=e12]:
+          - listitem [ref=e13]: Click cells in the grid to add drum sounds
+          - listitem [ref=e14]: Use the Play button to hear your beat
+          - listitem [ref=e15]: Click bar numbers to duplicate or repeat bars
+          - listitem [ref=e16]: Click instrument icons to show/hide tracks
+          - listitem [ref=e17]: Check the Settings page for playback options and custom drum kits
+          - listitem [ref=e18]: Save your work with the Save button in the editor
+      - generic [ref=e19]:
+        - link "Browse FAQ" [ref=e20] [cursor=pointer]:
+          - /url: "#faq"
+          - img [ref=e21]
+          - text: Browse FAQ
+        - link "Report an Issue" [ref=e23] [cursor=pointer]:
+          - /url: "#report"
+          - img [ref=e24]
+          - text: Report an Issue
+    - generic [ref=e26]:
+      - heading "Frequently Asked Questions" [level=2] [ref=e27]
+      - generic [ref=e28]:
+        - generic [ref=e29]:
+          - heading "Getting Started" [level=3] [ref=e30]
+          - button "How do I create a new beat?" [ref=e32]:
+            - generic [ref=e33]: How do I create a new beat?
+            - img [ref=e35]
+          - button "How do I play my beat?" [ref=e38]:
+            - generic [ref=e39]: How do I play my beat?
+            - img [ref=e41]
+          - button "How do I save my work?" [ref=e44]:
+            - generic [ref=e45]: How do I save my work?
+            - img [ref=e47]
+        - generic [ref=e49]:
+          - heading "Working with Patterns" [level=3] [ref=e50]
+          - button "How do I add a drum hit?" [ref=e52]:
+            - generic [ref=e53]: How do I add a drum hit?
+            - img [ref=e55]
+          - button "What do the different rows represent?" [ref=e58]:
+            - generic [ref=e59]: What do the different rows represent?
+            - img [ref=e61]
+          - button "How do I change the time signature or add more bars?" [ref=e64]:
+            - generic [ref=e65]: How do I change the time signature or add more bars?
+            - img [ref=e67]
+          - button "How do I duplicate or repeat bars?" [ref=e70]:
+            - generic [ref=e71]: How do I duplicate or repeat bars?
+            - img [ref=e73]
+          - button "How do I work with tracks and instruments?" [ref=e76]:
+            - generic [ref=e77]: How do I work with tracks and instruments?
+            - img [ref=e79]
+        - generic [ref=e81]:
+          - heading "Advanced Features" [level=3] [ref=e82]
+          - button "What are the playback settings?" [ref=e84]:
+            - generic [ref=e85]: What are the playback settings?
+            - img [ref=e87]
+          - button "How do I customize my drum kit?" [ref=e90]:
+            - generic [ref=e91]: How do I customize my drum kit?
+            - img [ref=e93]
+          - button "Can I create complex patterns with different time signatures?" [ref=e96]:
+            - generic [ref=e97]: Can I create complex patterns with different time signatures?
+            - img [ref=e99]
+          - button "How do hi-hats work in the editor?" [ref=e102]:
+            - generic [ref=e103]: How do hi-hats work in the editor?
+            - img [ref=e105]
+        - generic [ref=e107]:
+          - heading "Managing Your Beats" [level=3] [ref=e108]
+          - button "How do I view all my saved beats?" [ref=e110]:
+            - generic [ref=e111]: How do I view all my saved beats?
+            - img [ref=e113]
+          - button "Can I delete a beat?" [ref=e116]:
+            - generic [ref=e117]: Can I delete a beat?
+            - img [ref=e119]
+          - button "Is my data backed up?" [ref=e122]:
+            - generic [ref=e123]: Is my data backed up?
+            - img [ref=e125]
+        - generic [ref=e127]:
+          - heading "Technical Issues" [level=3] [ref=e128]
+          - button "What browsers are supported?" [ref=e130]:
+            - generic [ref=e131]: What browsers are supported?
+            - img [ref=e133]
+          - button "No sound is playing. What should I do?" [ref=e136]:
+            - generic [ref=e137]: No sound is playing. What should I do?
+            - img [ref=e139]
+          - button "The app feels slow or lags during playback. How can I fix that?" [ref=e142]:
+            - generic [ref=e143]: The app feels slow or lags during playback. How can I fix that?
+            - img [ref=e145]
+      - paragraph [ref=e148]:
+        - text: Can't find an answer to your question?
+        - link "Report an issue or ask for help" [ref=e149] [cursor=pointer]:
+          - /url: "#report"
+    - generic [ref=e150]:
+      - heading "Report an Issue" [level=2] [ref=e151]
+      - paragraph [ref=e152]: Encountered a bug or have a feature request? Let us know by filling out the form below.
+      - generic [ref=e153]:
+        - generic [ref=e154]:
+          - generic [ref=e155]:
+            - generic [ref=e156]: Your Name
+            - textbox "Your Name" [ref=e157]
+          - generic [ref=e158]:
+            - generic [ref=e159]: Email Address
+            - textbox "Email Address" [ref=e160]
+        - generic [ref=e161]:
+          - generic [ref=e162]: Issue Type
+          - combobox "Issue Type" [ref=e163]:
+            - option "Bug Report" [selected]
+            - option "Feature Request"
+            - option "Question"
+            - option "Other"
+        - generic [ref=e164]:
+          - generic [ref=e165]: Description
+          - textbox "Description" [ref=e166]:
+            - /placeholder: Please describe the issue in detail. For bugs, include steps to reproduce, what happened, and what you expected to happen.
+        - generic [ref=e167]:
+          - button "Submit Report" [ref=e168]
+          - paragraph [ref=e169]: We typically respond within 1-2 business days.
+    - generic [ref=e170]:
+      - paragraph [ref=e171]: "Need more help? Check out these resources:"
+      - generic [ref=e172]:
+        - link "Video Tutorials" [ref=e173] [cursor=pointer]:
+          - /url: "#"
+        - link "User Guide" [ref=e174] [cursor=pointer]:
+          - /url: "#"
+        - link "Community Forum" [ref=e175] [cursor=pointer]:
+          - /url: "#"
+  - navigation [ref=e176]:
+    - generic [ref=e177]:
+      - link "New" [ref=e178] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e180]
+        - text: New
+      - link "Beats" [ref=e182] [cursor=pointer]:
+        - /url: /
+        - img [ref=e184]
+        - text: Beats
+      - link "Settings" [ref=e186] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e188]
+        - text: Settings
+      - link "Help" [ref=e191] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e193]
+        - text: Help

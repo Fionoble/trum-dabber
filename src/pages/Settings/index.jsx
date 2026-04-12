@@ -283,8 +283,8 @@ export default function Settings() {
   };
 
   return (
-    <div className="settings-container p-4 max-w-4xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Settings</h1>
+    <div className="settings-container p-2 md:p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl md:text-3xl font-bold mb-4 md:mb-6">Settings</h1>
 
       {/* Drum Machine Settings Section */}
       <div className="settings-section bg-white rounded-lg shadow-sm p-6 mb-6">

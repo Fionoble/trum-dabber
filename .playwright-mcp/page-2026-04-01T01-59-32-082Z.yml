@@ -1,0 +1,30 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Your Beats" [level=1] [ref=e7]
+      - generic [ref=e8]:
+        - button "Switch to list view" [ref=e9]:
+          - img [ref=e10]
+        - link "Beat" [ref=e12] [cursor=pointer]:
+          - /url: /editor/new
+          - img [ref=e13]
+          - text: Beat
+    - paragraph [ref=e17]: Loading your beats...
+  - navigation [ref=e18]:
+    - generic [ref=e19]:
+      - link "New" [ref=e20] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e22]
+        - text: New
+      - link "Beats" [ref=e24] [cursor=pointer]:
+        - /url: /
+        - img [ref=e26]
+        - text: Beats
+      - link "Settings" [ref=e28] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e30]
+        - text: Settings
+      - link "Help" [ref=e33] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e35]
+        - text: Help

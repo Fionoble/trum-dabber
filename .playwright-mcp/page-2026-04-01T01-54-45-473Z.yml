@@ -1,0 +1,48 @@
+- generic [ref=e3]:
+  - generic [ref=e6]:
+    - generic [ref=e7]:
+      - heading "Dabber" [level=2] [ref=e8]
+      - paragraph [ref=e9]: Sign in to access your beats
+    - generic [ref=e10]:
+      - generic [ref=e11]:
+        - generic [ref=e12]:
+          - generic [ref=e13]: Email address
+          - textbox "Email address" [ref=e14]
+        - generic [ref=e15]:
+          - generic [ref=e16]: Password
+          - textbox "Password" [ref=e17]
+      - generic [ref=e18]:
+        - generic [ref=e19]:
+          - checkbox "Remember me" [ref=e20]
+          - generic [ref=e21]: Remember me
+        - button "Forgot your password?" [ref=e23]
+      - button "Sign in" [ref=e25]:
+        - img [ref=e27]
+        - text: Sign in
+      - generic [ref=e29]:
+        - generic [ref=e34]: Or continue with
+        - button "Sign in with Google" [ref=e36]:
+          - img [ref=e37]
+          - text: Sign in with Google
+      - paragraph [ref=e43]:
+        - text: Don't have an account?
+        - link "Sign up" [ref=e44] [cursor=pointer]:
+          - /url: /signup
+  - navigation [ref=e45]:
+    - generic [ref=e46]:
+      - link "New" [ref=e47] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e49]
+        - text: New
+      - link "Beats" [ref=e51] [cursor=pointer]:
+        - /url: /
+        - img [ref=e53]
+        - text: Beats
+      - link "Settings" [ref=e55] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e57]
+        - text: Settings
+      - link "Help" [ref=e60] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e62]
+        - text: Help

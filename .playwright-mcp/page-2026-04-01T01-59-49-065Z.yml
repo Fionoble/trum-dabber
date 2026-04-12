@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - generic [ref=e6]:
+      - heading "Dabber" [level=2] [ref=e7]
+      - button "Toggle sidebar" [ref=e8]:
+        - img [ref=e9]
+    - navigation [ref=e11]:
+      - link "New Dab" [ref=e12] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e14]
+        - generic [ref=e16]: New Dab
+      - link "Tab List" [ref=e17] [cursor=pointer]:
+        - /url: /
+        - img [ref=e19]
+        - generic [ref=e21]: Tab List
+      - link "Settings" [ref=e22] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e24]
+        - generic [ref=e27]: Settings
+      - link "Help" [ref=e28] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e30]
+        - generic [ref=e32]: Help
+    - button "Logout" [ref=e34]:
+      - img [ref=e36]
+      - generic [ref=e38]: Logout
+  - generic [ref=e40]:
+    - generic [ref=e41]:
+      - heading "Your Beats" [level=1] [ref=e42]
+      - generic [ref=e43]:
+        - button "Switch to list view" [ref=e44]:
+          - img [ref=e45]
+        - link "Create New Beat" [ref=e47] [cursor=pointer]:
+          - /url: /editor/new
+          - img [ref=e48]
+          - generic [ref=e50]: Create New
+          - text: Beat
+    - paragraph [ref=e53]: Loading your beats...

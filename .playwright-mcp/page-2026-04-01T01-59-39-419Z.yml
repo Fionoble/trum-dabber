@@ -1,0 +1,38 @@
+- generic [ref=e3]:
+  - generic [ref=e5]:
+    - heading "Settings" [level=1] [ref=e6]
+    - heading "Drum Kit" [level=2] [ref=e8]:
+      - img [ref=e9]
+      - text: Drum Kit
+    - heading "Playback" [level=2] [ref=e14]:
+      - img [ref=e15]
+      - text: Playback
+    - heading "API Keys" [level=2] [ref=e20]:
+      - img [ref=e21]
+      - text: API Keys
+    - generic [ref=e25]:
+      - heading "Account" [level=2] [ref=e26]:
+        - img [ref=e27]
+        - text: Account
+      - generic [ref=e29]:
+        - heading "Danger Zone" [level=3] [ref=e30]
+        - paragraph [ref=e31]: Once you delete your account, there is no going back. This is a permanent action.
+        - button "Delete Account" [ref=e32]
+  - navigation [ref=e33]:
+    - generic [ref=e34]:
+      - link "New" [ref=e35] [cursor=pointer]:
+        - /url: /editor/new
+        - img [ref=e37]
+        - text: New
+      - link "Beats" [ref=e39] [cursor=pointer]:
+        - /url: /
+        - img [ref=e41]
+        - text: Beats
+      - link "Settings" [ref=e43] [cursor=pointer]:
+        - /url: /settings
+        - img [ref=e45]
+        - text: Settings
+      - link "Help" [ref=e48] [cursor=pointer]:
+        - /url: /help
+        - img [ref=e50]
+        - text: Help
