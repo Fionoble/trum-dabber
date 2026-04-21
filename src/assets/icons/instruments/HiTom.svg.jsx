@@ -13,11 +13,11 @@ export default () => (
       cy="8"
       rx="5"
       ry="3.5"
-      stroke="black"
+      stroke="currentColor"
       stroke-width="1.5"
       fill="none"
     />
-    <line x1="10" y1="11.5" x2="10" y2="16" stroke="black" stroke-width="1" />
-    <circle cx="10" cy="16.5" r="1" fill="black" />
+    <line x1="10" y1="11.5" x2="10" y2="16" stroke="currentColor" stroke-width="1" />
+    <circle cx="10" cy="16.5" r="1" fill="currentColor" />
   </svg>
 );

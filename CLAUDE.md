@@ -22,3 +22,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Uses Supabase for backend services
 - Follows component-based architecture with shared utilities
 - Organized by feature folders in the src/pages directory
+
+## Git Worktrees
+- When creating git worktrees, always place them in a `worktrees/` folder at the project root (e.g. `git worktree add worktrees/my-feature -b my-feature`)
+- Never create worktrees outside the project directory

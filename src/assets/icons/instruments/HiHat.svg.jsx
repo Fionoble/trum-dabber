@@ -8,8 +8,8 @@ export default () => (
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <line x1="5" y1="10" x2="15" y2="10" stroke="black" stroke-width="1.5" />
-    <line x1="10" y1="10" x2="10" y2="18" stroke="black" stroke-width="1" />
-    <circle cx="10" cy="9" r="1.5" fill="black" />
+    <line x1="5" y1="10" x2="15" y2="10" stroke="currentColor" stroke-width="1.5" />
+    <line x1="10" y1="10" x2="10" y2="18" stroke="currentColor" stroke-width="1" />
+    <circle cx="10" cy="9" r="1.5" fill="currentColor" />
   </svg>
 );
