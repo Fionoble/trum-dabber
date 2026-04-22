@@ -1,6 +1,5 @@
 import { useState, useEffect } from "preact/hooks";
 import { tabStorage } from "../../services/storage";
-import { isAuthenticated } from "../../services/auth";
 import { Icon } from "../../components/Icon";
 
 export default function TabList() {
@@ -12,17 +11,11 @@ export default function TabList() {
 
   useEffect(() => {
     loadTabs();
-  }, [isAuthenticated.value]);
+  }, []);
 
   const loadTabs = async () => {
     setIsLoading(true);
     setError(null);
-
-    if (!isAuthenticated.value) {
-      setTabs([]);
-      setIsLoading(false);
-      return;
-    }
 
     try {
       const loadedTabs = await tabStorage.getTabs();
