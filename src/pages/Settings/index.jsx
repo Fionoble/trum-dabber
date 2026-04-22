@@ -1,4 +1,4 @@
-import { useState, useEffect } from "preact/hooks";
+import { useState, useEffect, useRef } from "preact/hooks";
 import { signOut } from "../../services/auth";
 import { tabStorage } from "../../services/storage";
 import { useLocation } from "preact-iso";
@@ -65,6 +65,10 @@ function SortableInstrumentItem({ instrument, index, onRemove }) {
 }
 
 export default function Settings() {
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importExportMsg, setImportExportMsg] = useState(null);
+  const fileInputRef = useRef(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmText, setConfirmText] = useState("");
   const [deleteStep, setDeleteStep] = useState(1);
@@ -234,6 +238,54 @@ export default function Settings() {
     setInstruments(updatedInstruments);
   };
 
+  const handleExport = async () => {
+    setIsExporting(true);
+    setImportExportMsg(null);
+    try {
+      const tabs = await tabStorage.getTabs();
+      const data = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), tabs }, null, 2);
+      const blob = new Blob([data], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `drum-dabber-export-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setImportExportMsg({ type: 'success', text: `Exported ${tabs.length} beat${tabs.length !== 1 ? 's' : ''}.` });
+    } catch (err) {
+      console.error('Export failed:', err);
+      setImportExportMsg({ type: 'error', text: 'Export failed. Please try again.' });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImport = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setIsImporting(true);
+    setImportExportMsg(null);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const tabs = data.tabs || data;
+      if (!Array.isArray(tabs)) throw new Error('Invalid format');
+      let imported = 0;
+      for (const tab of tabs) {
+        const { id, user_id, created, modified, ...rest } = tab;
+        await tabStorage.saveTab(rest);
+        imported++;
+      }
+      setImportExportMsg({ type: 'success', text: `Imported ${imported} beat${imported !== 1 ? 's' : ''}.` });
+    } catch (err) {
+      console.error('Import failed:', err);
+      setImportExportMsg({ type: 'error', text: 'Import failed. Check that the file is a valid export.' });
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
     if (active.id !== over.id) {
@@ -254,6 +306,49 @@ export default function Settings() {
   return (
     <div className="px-4 pt-6 pb-4 max-w-2xl mx-auto">
       <h1 className="text-2xl font-bold text-on-surface mb-6">Settings</h1>
+
+      {/* Export / Import Section */}
+      <section className="bg-surface rounded-xl p-4 mb-4">
+        <h2 className="text-lg font-semibold text-on-surface mb-3 flex items-center gap-2">
+          <Icon name="swap_vert" size="text-xl" className="text-primary" />
+          Export / Import Beats
+        </h2>
+        <p className="text-sm text-on-surface-dim mb-3">
+          Export all your beats as a JSON file, or import from a previous export.
+        </p>
+
+        {importExportMsg && (
+          <div className={`text-sm mb-3 ${importExportMsg.type === 'success' ? 'text-success' : 'text-danger'}`}>
+            {importExportMsg.text}
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <button
+            onClick={handleExport}
+            disabled={isExporting}
+            className="flex-1 px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Icon name="download" size="text-lg" />
+            {isExporting ? 'Exporting...' : 'Export All'}
+          </button>
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex-1 px-4 py-2.5 bg-surface-light border border-white/10 text-on-surface rounded-lg text-sm font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            <Icon name="upload" size="text-lg" />
+            {isImporting ? 'Importing...' : 'Import'}
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            className="hidden"
+            onChange={handleImport}
+          />
+        </div>
+      </section>
 
       {/* Drum Kit Section */}
       <section className="bg-surface rounded-xl p-4 mb-4">
