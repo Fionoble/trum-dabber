@@ -10,27 +10,44 @@ import cowbellSound from "../assets/sounds/cowbell.wav";
 
 export class DrumMachine {
   constructor() {
-    if (window.sharedAudioContext) {
-      this.audioContext = window.sharedAudioContext;
-      if (this.audioContext.state === "suspended") {
-        this.audioContext.resume();
-      }
-    } else {
-      this.audioContext = new (window.AudioContext ||
-        window.webkitAudioContext)();
-      window.sharedAudioContext = this.audioContext;
-    }
-
     this.samples = {};
     this.isLoaded = false;
-    this.masterGain = this.audioContext.createGain();
-    this.masterGain.gain.value = 0.7; // Set default volume
-    this.masterGain.connect(this.audioContext.destination);
     this.activeSources = {};
     this.instrumentGroups = {
       hihat: "hihat-group",
       hihatOpen: "hihat-group",
     };
+    this._unlocked = false;
+    this._initContext();
+  }
+
+  _initContext() {
+    if (window.sharedAudioContext) {
+      this.audioContext = window.sharedAudioContext;
+    } else {
+      this.audioContext = new (window.AudioContext ||
+        window.webkitAudioContext)();
+      window.sharedAudioContext = this.audioContext;
+    }
+    this.masterGain = this.audioContext.createGain();
+    this.masterGain.gain.value = 0.7;
+    this.masterGain.connect(this.audioContext.destination);
+  }
+
+  // iOS requires audio to be triggered from a user gesture.
+  // Call this on the first tap/click to unlock playback.
+  async unlock() {
+    if (this._unlocked) return;
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
+    // Play a silent buffer to fully unlock on iOS
+    const buf = this.audioContext.createBuffer(1, 1, this.audioContext.sampleRate);
+    const src = this.audioContext.createBufferSource();
+    src.buffer = buf;
+    src.connect(this.audioContext.destination);
+    src.start(0);
+    this._unlocked = true;
   }
 
   async loadSamples() {
@@ -327,13 +344,6 @@ export class DrumMachine {
       this.masterGain.gain.value = 0.7;
     }, 100);
 
-    setTimeout(() => {
-      if (this.audioContext && this.audioContext.state === "running") {
-        this.audioContext.suspend().catch((err) => {
-          console.warn("Could not suspend audio context:", err);
-        });
-      }
-    }, 200);
   }
 
   cleanup() {

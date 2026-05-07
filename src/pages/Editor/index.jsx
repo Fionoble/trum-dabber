@@ -625,6 +625,7 @@ export default function Editor({ id, newTab }) {
   }, [trackContextMenu.visible]);
 
   const handleCellClick = (row, col) => {
+    drumMachineRef.current?.unlock();
     const newPattern = [...pattern];
 
     if (specialTracks[row]) {
@@ -778,6 +779,7 @@ export default function Editor({ id, newTab }) {
   };
 
   const togglePlayback = async () => {
+    await drumMachineRef.current?.unlock();
     if (isPlaying) {
       clearInterval(intervalRef.current);
       setCurrentStep(-1);
