@@ -1,23 +1,11 @@
+// Floor tom — large drum with legs
 export default () => (
-  <svg
-    width="20"
-    height="20"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect
-      x="4"
-      y="6"
-      width="12"
-      height="8"
-      stroke="currentColor"
-      stroke-width="1.5"
-      fill="none"
-    />
-    <line x1="6" y1="14" x2="6" y2="18" stroke="currentColor" stroke-width="1" />
-    <line x1="14" y1="14" x2="14" y2="18" stroke="currentColor" stroke-width="1" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="5" rx="9" ry="3.5" />
+    <line x1="3" y1="5" x2="3" y2="17" />
+    <line x1="21" y1="5" x2="21" y2="17" />
+    <ellipse cx="12" cy="17" rx="9" ry="3.5" />
+    <line x1="5" y1="20" x2="5" y2="23" />
+    <line x1="19" y1="20" x2="19" y2="23" />
   </svg>
 );

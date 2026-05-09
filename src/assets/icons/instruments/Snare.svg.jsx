@@ -1,23 +1,11 @@
+// Snare drum — shallow cylinder with snare wires underneath
 export default () => (
-  <svg
-    width="20"
-    height="20"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    stroke="currentColor"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <rect
-      x="3"
-      y="6"
-      width="14"
-      height="8"
-      stroke="currentColor"
-      stroke-width="1.5"
-      fill="none"
-    ></rect>
-    <line x1="7" y1="6" x2="7" y2="14" stroke="currentColor" stroke-width="1"></line>
-    <line x1="12" y1="6" x2="12" y2="14" stroke="currentColor" stroke-width="1"></line>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <ellipse cx="12" cy="8" rx="9" ry="4" />
+    <line x1="3" y1="8" x2="3" y2="14" />
+    <line x1="21" y1="8" x2="21" y2="14" />
+    <ellipse cx="12" cy="14" rx="9" ry="4" />
+    <line x1="6" y1="17.5" x2="18" y2="10.5" strokeDasharray="2 2" strokeWidth="1" />
+    <line x1="6" y1="10.5" x2="18" y2="17.5" strokeDasharray="2 2" strokeWidth="1" />
   </svg>
 );

@@ -1,14 +1,8 @@
+// Cowbell — trapezoidal bell shape with handle
 export default () => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <path d="M8 4 L16 4 L18 16 L6 16 Z" />
-    <circle cx="12" cy="12" r="1" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 3 L14 3 L18 19 L6 19 Z" />
+    <line x1="12" y1="3" x2="12" y2="1" />
+    <ellipse cx="12" cy="1" rx="2" ry="1" />
   </svg>
 );

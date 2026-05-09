@@ -1,23 +1,8 @@
+// Bass/kick drum — large circle with beater
 export default () => (
-  <svg
-    width="20"
-    height="20"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-  >
-    <circle
-      cx="10"
-      cy="10"
-      r="6"
-      stroke="currentColor"
-      stroke-width="1.5"
-      fill="none"
-    />
-    <line x1="4" y1="16" x2="4" y2="19" stroke="currentColor" stroke-width="1" />
-    <line x1="16" y1="16" x2="16" y2="19" stroke="currentColor" stroke-width="1" />
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="11" r="9" />
+    <circle cx="12" cy="11" r="4" />
+    <line x1="12" y1="20" x2="12" y2="23" />
   </svg>
 );
