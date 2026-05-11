@@ -11,7 +11,7 @@ import Help from './pages/Help';
 function App() {
   return (
     <LocationProvider>
-      <main class="flex-1 overflow-y-auto pb-24 pt-safe">
+      <main class="flex-1 overflow-y-auto pb-24">
         <Router>
           <Help path="/help" />
           <Editor path="/editor/new" newTab />
