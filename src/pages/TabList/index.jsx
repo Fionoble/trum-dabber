@@ -217,16 +217,7 @@ export default function TabList() {
         </div>
       )}
 
-      {/* FAB - New Beat */}
-      {!isLoading && tabs.length > 0 && (
-        <a
-          href="/editor/new"
-          className="fixed bottom-24 right-4 w-14 h-14 bg-primary text-white rounded-2xl shadow-lg shadow-primary/30 flex items-center justify-center active:scale-90 transition-transform z-20"
-          aria-label="Create new beat"
-        >
-          <Icon name="add" size="text-2xl" />
-        </a>
-      )}
+
     </div>
   );
 }
