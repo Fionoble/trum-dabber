@@ -16,6 +16,8 @@ export class DrumMachine {
     this.instrumentGroups = {
       hihat: "hihat-group",
       hihatOpen: "hihat-group",
+      ride: "ride-group",
+      rideBell: "ride-group",
     };
     this._unlocked = false;
     this._initContext();
@@ -160,6 +162,20 @@ export class DrumMachine {
         pitchDecay = 0.001;
         noiseMix = 0.1;
         method = "square";
+        break;
+      case "ride":
+        frequency = 500;
+        decay = 0.15;
+        pitchDecay = 0.01;
+        noiseMix = 0.6;
+        method = "noise";
+        break;
+      case "rideBell":
+        frequency = 800;
+        decay = 0.12;
+        pitchDecay = 0.005;
+        noiseMix = 0.2;
+        method = "mix";
         break;
       case "crash":
         frequency = 300;

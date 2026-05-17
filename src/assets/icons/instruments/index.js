@@ -7,6 +7,8 @@ import Tom from './Tom.svg.jsx';
 import HiTom from './HiTom.svg.jsx';
 import FloorTom from './FloorTom.svg.jsx';
 import Cowbell from './Cowbell.svg.jsx';
+import Ride from './Ride.svg.jsx';
+import RideBell from './RideBell.svg.jsx';
 
 // Map instrument names to their corresponding components
 const InstrumentIcons = {
@@ -19,6 +21,8 @@ const InstrumentIcons = {
   hiTom: HiTom,
   floorTom: FloorTom,
   cowbell: Cowbell,
+  ride: Ride,
+  rideBell: RideBell,
 };
 
 export default InstrumentIcons;

@@ -90,7 +90,7 @@ export default function Settings() {
 
   const availableInstruments = [
     "kick", "snare", "hihat", "hihatOpen", "tom", "hiTom",
-    "floorTom", "crash", "cowbell",
+    "floorTom", "crash", "ride", "cowbell",
   ];
 
   useEffect(() => {

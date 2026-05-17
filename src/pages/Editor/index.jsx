@@ -101,22 +101,22 @@ export default function Editor({ id, newTab }) {
   }, [location.url]);
 
   useEffect(() => {
+    const tracks = {};
     const hihatIndex = drumSounds.indexOf("hihat");
-
     if (hihatIndex !== -1) {
-      setSpecialTracks({
-        [hihatIndex]: {
-          states: [false, "hihat", "hihatOpen"],
-          nextState: {
-            false: "hihat",
-            hihat: "hihatOpen",
-            hihatOpen: false,
-          },
-        },
-      });
-    } else {
-      setSpecialTracks({});
+      tracks[hihatIndex] = {
+        states: [false, "hihat", "hihatOpen"],
+        nextState: { false: "hihat", hihat: "hihatOpen", hihatOpen: false },
+      };
     }
+    const rideIndex = drumSounds.indexOf("ride");
+    if (rideIndex !== -1) {
+      tracks[rideIndex] = {
+        states: [false, "ride", "rideBell"],
+        nextState: { false: "ride", ride: "rideBell", rideBell: false },
+      };
+    }
+    setSpecialTracks(tracks);
   }, [drumSounds]);
 
   // Function to initialize a new tab with default values
@@ -560,7 +560,7 @@ export default function Editor({ id, newTab }) {
                           <button
                             key={cellIndex}
                             className={`drum-cell flex-1 min-w-0 h-7 md:h-6 rounded-[3px] border-0 p-0 transition-all duration-75 relative
-                              ${cell ? (cell === 'hihatOpen' ? 'bg-primary-light' : 'bg-primary') : 'bg-surface-light'}
+                              ${cell ? (cell === 'hihatOpen' || cell === 'rideBell' ? 'bg-primary-light' : 'bg-primary') : 'bg-surface-light'}
                               ${currentStep === globalColIndex ? 'ring-2 ring-primary-light shadow-[0_0_8px_rgba(99,102,241,0.5)]' : ''}
                               ${cell && currentStep === globalColIndex ? 'scale-105 shadow-[0_0_12px_rgba(99,102,241,0.7)]' : ''}
                               ${isBeatStart && !cell ? 'bg-surface-light/80' : ''}
@@ -569,10 +569,13 @@ export default function Editor({ id, newTab }) {
                             onClick={() =>
                               handleCellClick(rowIndex, globalColIndex)
                             }
-                            aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : ""} bar ${barIndex + 1}, step ${globalColIndex - barIndex * stepsPerBar + 1}`}
+                            aria-label={`${drumSounds[rowIndex]} ${cell === "hihatOpen" ? "open" : cell === "rideBell" ? "bell" : ""} bar ${barIndex + 1}, step ${globalColIndex - barIndex * stepsPerBar + 1}`}
                           >
                             {cell === 'hihatOpen' && (
                               <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white font-bold">O</span>
+                            )}
+                            {cell === 'rideBell' && (
+                              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white font-bold">B</span>
                             )}
                           </button>
                         );
