@@ -75,7 +75,6 @@ export default function Editor({ id, newTab }) {
   const [pattern, setPattern] = useState(createEmptyPattern(totalSteps));
 
   const drumMachineRef = useRef(null);
-  const intervalRef = useRef(null);
   const nameInputRef = useRef(null);
   const sequencerRef = useRef(null);
 
@@ -84,7 +83,6 @@ export default function Editor({ id, newTab }) {
 
   useEffect(() => {
     if (isPlaying && drumMachineRef.current) {
-      clearInterval(intervalRef.current);
       drumMachineRef.current.stop();
       setIsPlaying(false);
       setCurrentStep(-1);
@@ -92,11 +90,6 @@ export default function Editor({ id, newTab }) {
 
     return () => {
       if (drumMachineRef.current) drumMachineRef.current.stop();
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        setIsPlaying(false);
-        setCurrentStep(-1);
-      }
     };
   }, [location.url]);
 
@@ -133,7 +126,6 @@ export default function Editor({ id, newTab }) {
 
     // Reset any playing state
     if (isPlaying) {
-      if (intervalRef.current) clearInterval(intervalRef.current);
       drumMachineRef?.current?.stop();
       setIsPlaying(false);
     }
@@ -174,7 +166,6 @@ export default function Editor({ id, newTab }) {
 
     const handleVisibilityChange = () => {
       if (document.hidden && isPlaying) {
-        if (intervalRef.current) clearInterval(intervalRef.current);
         drumMachineRef?.current?.stop();
         setIsPlaying(false);
         setCurrentStep(-1);
@@ -189,7 +180,6 @@ export default function Editor({ id, newTab }) {
     window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
       drumMachineRef?.current?.stop();
       window.globalDrumMachine = null;
       document.removeEventListener("visibilitychange", handleVisibilityChange);
@@ -784,11 +774,10 @@ export default function Editor({ id, newTab }) {
   const togglePlayback = async () => {
     await drumMachineRef.current?.unlock();
     if (isPlaying) {
-      clearInterval(intervalRef.current);
-      setCurrentStep(-1);
       if (drumMachineRef.current) {
         drumMachineRef.current.stop();
       }
+      setCurrentStep(-1);
       setIsPlaying(false);
 
       // Reset all repetition counters
@@ -808,54 +797,40 @@ export default function Editor({ id, newTab }) {
         await playCountIn();
       }
 
-      const quarterNoteTime = (60 * 1000) / bpm;
-      const stepTime = quarterNoteTime / SUBDIVISION;
-
-      let step = 0;
       const totalPatternSteps = calculateTotalSteps();
 
-      intervalRef.current = setInterval(() => {
-        setCurrentStep(step);
+      // Build visible pattern (filter hidden tracks)
+      const visiblePattern = pattern.map((row, index) =>
+        hiddenTracks[index] ? Array(row.length).fill(false) : row,
+      );
 
-        // Play sounds for current step, skipping hidden tracks
-        if (drumMachineRef.current) {
-          // Filter out hidden tracks before playing
-          const visiblePattern = pattern.map((row, index) =>
-            hiddenTracks[index] ? Array(row.length).fill(false) : row,
-          );
+      drumMachineRef.current.startSequencer({
+        bpm: Number(bpm),
+        subdivision: SUBDIVISION,
+        pattern: visiblePattern,
+        sounds: drumSounds,
+        totalSteps: totalPatternSteps,
+        getNextStep,
+        onStep: (step) => {
+          setCurrentStep(step);
 
-          // Use the filtered pattern for playback
-          drumMachineRef.current.playStep(visiblePattern, step, drumSounds);
-        }
-
-        // Get the next step, considering repeats
-        step = getNextStep(step, totalPatternSteps);
-        
-        // If step is -1, we've reached the end and should stop playback (non-loop mode)
-        if (step === -1) {
-          clearInterval(intervalRef.current);
+          // Scroll to current bar on desktop
+          const stepsPerBar = timeSignature.numerator * SUBDIVISION;
+          const currentBarIndex = Math.floor(step / stepsPerBar);
+          if (window.innerWidth >= 768 && step % stepsPerBar === 0) {
+            const barElement = document.querySelector(
+              `.bar-section:nth-child(${currentBarIndex + 1})`,
+            );
+            if (barElement) {
+              barElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            }
+          }
+        },
+        onEnd: () => {
           setCurrentStep(-1);
-          if (drumMachineRef.current) {
-            drumMachineRef.current.stop();
-          }
           setIsPlaying(false);
-          return;
-        }
-
-        // Scroll to the bar containing the current step if needed
-        const stepsPerBar = timeSignature.numerator * SUBDIVISION;
-        const currentBarIndex = Math.floor(step / stepsPerBar);
-
-        // Only scroll on larger screens where bars are arranged vertically
-        if (window.innerWidth >= 768) {
-          const barElement = document.querySelector(
-            `.bar-section:nth-child(${currentBarIndex + 1})`,
-          );
-          if (barElement && step % stepsPerBar === 0) {
-            barElement.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          }
-        }
-      }, stepTime);
+        },
+      });
     }
   };
 

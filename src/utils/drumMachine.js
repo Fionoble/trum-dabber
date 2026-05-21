@@ -300,41 +300,111 @@ export class DrumMachine {
     this.masterGain.gain.value = volume;
   }
 
-  async playStep(pattern, step, sounds) {
-    if (this.audioContext.state === "suspended") {
-      try {
-        await this.audioContext.resume();
-      } catch (err) {
-        console.error("Error resuming audio context:", err);
-      }
-    }
-
-    const activeSounds = [];
-
+  // Schedule a single step's sounds at a precise audio-clock time
+  scheduleStep(pattern, step, sounds, when) {
     sounds.forEach((sound, index) => {
       const cell = pattern[index][step];
       if (cell) {
         const soundToPlay = typeof cell === "string" ? cell : sound;
-        activeSounds.push({ index, soundToPlay });
+        this.playSoundAt(soundToPlay, when);
       }
     });
+  }
 
-    activeSounds.sort((a, b) => {
-      if (a.soundToPlay === "hihatOpen" && b.soundToPlay === "hihat") return -1;
-      if (a.soundToPlay === "hihat" && b.soundToPlay === "hihatOpen") return 1;
-      return a.index - b.index;
-    });
+  // Play a sound at a precise audioContext time (non-async, no resume)
+  playSoundAt(sampleName, when) {
+    if (!this.samples[sampleName]) return;
+    const group = this.instrumentGroups[sampleName];
 
-    for (const { soundToPlay } of activeSounds) {
-      try {
-        await this.playSound(soundToPlay);
-      } catch (err) {
-        console.error(`Error playing sound ${soundToPlay}:`, err);
+    if (group && this.activeSources[group]) {
+      for (const s of this.activeSources[group]) {
+        if (s.gainNode && !s.isStopping) {
+          s.isStopping = true;
+          s.gainNode.gain.cancelScheduledValues(when);
+          s.gainNode.gain.setValueAtTime(s.gainNode.gain.value, when);
+          s.gainNode.gain.linearRampToValueAtTime(0, when + 0.01);
+          try { s.source.stop(when + 0.02); } catch (_) {}
+        }
       }
+      this.activeSources[group] = [];
+    }
+
+    const source = this.audioContext.createBufferSource();
+    source.buffer = this.samples[sampleName];
+    const gainNode = this.audioContext.createGain();
+    source.connect(gainNode);
+    gainNode.connect(this.masterGain);
+    source.start(when);
+
+    if (group) {
+      if (!this.activeSources[group]) this.activeSources[group] = [];
+      this.activeSources[group].push({ source, gainNode, isStopping: false });
+      source.onended = () => {
+        this.activeSources[group] = this.activeSources[group].filter(s => s.source !== source);
+      };
     }
   }
 
+  // --- Look-ahead sequencer ---
+  // Schedules notes using the audio clock, driven by a fast JS timer.
+  // onStep(step) is called for UI updates when each step fires.
+  startSequencer({ bpm, subdivision, pattern, sounds, totalSteps, getNextStep, onStep, onEnd }) {
+    this.stopSequencer();
+    if (this.audioContext.state === "suspended") this.audioContext.resume();
+
+    const stepTime = 60 / bpm / subdivision;
+    const lookAhead = 0.1;   // schedule 100ms ahead
+    const timerInterval = 25; // check every 25ms
+
+    let currentStep = 0;
+    let nextStepTime = this.audioContext.currentTime + 0.05; // small initial delay
+
+    const scheduler = () => {
+      while (nextStepTime < this.audioContext.currentTime + lookAhead) {
+        // Schedule audio at precise time
+        this.scheduleStep(pattern, currentStep, sounds, nextStepTime);
+
+        // UI callback (fires immediately, visual will be slightly early but consistent)
+        onStep(currentStep);
+
+        nextStepTime += stepTime;
+        const next = getNextStep(currentStep, totalSteps);
+        if (next === -1) {
+          this.stopSequencer();
+          if (onEnd) onEnd();
+          return;
+        }
+        currentStep = next;
+      }
+    };
+
+    this._seqTimer = setInterval(scheduler, timerInterval);
+    scheduler(); // run immediately
+  }
+
+  stopSequencer() {
+    if (this._seqTimer) {
+      clearInterval(this._seqTimer);
+      this._seqTimer = null;
+    }
+  }
+
+  // Legacy method kept for single-sound preview on cell tap
+  async playStep(pattern, step, sounds) {
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
+    sounds.forEach((sound, index) => {
+      const cell = pattern[index][step];
+      if (cell) {
+        const soundToPlay = typeof cell === "string" ? cell : sound;
+        this.playSound(soundToPlay);
+      }
+    });
+  }
+
   stop() {
+    this.stopSequencer();
     // Quick volume fade out to avoid clicks
     const now = this.audioContext.currentTime;
     this.masterGain.gain.cancelScheduledValues(now);
